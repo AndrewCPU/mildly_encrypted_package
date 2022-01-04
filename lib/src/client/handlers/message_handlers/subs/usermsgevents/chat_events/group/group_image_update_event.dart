@@ -27,7 +27,7 @@ class GroupImageUpdateEvent implements MessageHandler {
   void handle(String message, String from, {String? keyID}) async {
     Map map = jsonDecode(message);
     String newImageURL = map[ClientComponent.GROUP_IMAGE_UPDATE];
-    ClientGroupChat? group = ((await ClientManagement.getInstance().getGroupChat(keyID!)));
+    ClientGroupChat? group = ((await (await ClientManagement.getInstance()).getGroupChat(keyID!)));
 
     if (group == null) {
       ELog.e("Cannot find group to update name.");
@@ -39,5 +39,6 @@ class GroupImageUpdateEvent implements MessageHandler {
     ELog.i("Received file to $decryptedPath");
     await group.updateProfilePicturePath(decryptedPath);
     await group.init();
+    CoreEventRegistry().notify(CoreEventType.PROFILE_PICTURE_UPDATE, data: from);
   }
 }

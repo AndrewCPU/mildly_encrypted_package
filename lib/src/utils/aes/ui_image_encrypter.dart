@@ -16,7 +16,7 @@ String computeImage(List<String> l) {
   crypt.setPassword(mult.toString());
   crypt.setOverwriteMode(AesCryptOwMode.on);
 
-  String targetPath = (saveDirectory) + Platform.pathSeparator + Uuid().v4() + ".aes";
+  String targetPath = (saveDirectory) + Uuid().v4() + ".aes";
   crypt.encryptFileSync(path, targetPath);
   return targetPath;
 }

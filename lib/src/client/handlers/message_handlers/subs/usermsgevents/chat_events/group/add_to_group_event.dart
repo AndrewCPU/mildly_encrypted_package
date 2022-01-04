@@ -28,7 +28,7 @@ class AddToGroupEvent implements MessageHandler {
     List<String> members = (await ClientKeyManager().getGroupChatMembers(client.serverUrl, groupChatID))!;
     members.add(map[ClientComponent.ADD_TO_GROUP]);
     await ClientKeyManager().setGroupChatMembers(client.serverUrl, groupChatID, members);
-    ClientGroupChat? chat = ((await ClientManagement.getInstance().getGroupChat(keyID)));
+    ClientGroupChat? chat = ((await (await ClientManagement.getInstance()).getGroupChat(keyID)));
     if(chat == null){
       ELog.e("Cannot reinit group. Can't find it!");
       return;

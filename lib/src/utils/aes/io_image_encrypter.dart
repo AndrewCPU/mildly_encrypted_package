@@ -23,7 +23,7 @@ class ImageEncrypter implements ImageEncrypterMod {
     if (!(await (Directory(saveDirectory).exists()))) {
       await Directory(saveDirectory).create(recursive: true);
     }
-    String targetPath = (saveDirectory) + Platform.pathSeparator + Uuid().v4() + ".aes";
+    String targetPath = (saveDirectory) + Uuid().v4() + ".aes";
     await crypt.encryptFile(path, targetPath);
     return targetPath;
   }

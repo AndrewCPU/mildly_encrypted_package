@@ -46,9 +46,9 @@ class ReadStatusHandler implements MessageHandler {
     currentMessageData['read_status'] = reads;
     await MessageStorage().updateMessage(serverIP, chatID, messageUuid, currentMessageData);
     if (keyID != null) {
-      UpdateNotificationRegistry.getInstance().messageUpdate((await ClientManagement.getInstance().getGroupChat(keyID))!, messageUuid);
+      UpdateNotificationRegistry.getInstance().messageUpdate((await (await ClientManagement.getInstance()).getGroupChat(keyID))!, messageUuid);
     } else {
-      UpdateNotificationRegistry.getInstance().messageUpdate((await ClientManagement.getInstance().getUser(from))!, messageUuid);
+      UpdateNotificationRegistry.getInstance().messageUpdate((await (await ClientManagement.getInstance()).getUser(from))!, messageUuid);
     }
   }
 }

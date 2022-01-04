@@ -38,8 +38,7 @@ class User {
   Future<void> updatePushNotificationCode(String key) async {
     String? data = await KeyHandler().getUserDataColumn(uuid);
     if (data == null) {
-      ELog.e(
-          "Error fetching data whilst trying to update push notification for $uuid");
+      ELog.e("Error fetching data whilst trying to update push notification for $uuid");
       return;
     }
     Map decoded = jsonDecode(data);
@@ -50,8 +49,7 @@ class User {
   Future<String?> getPushNotificationCode() async {
     String? data = await KeyHandler().getUserDataColumn(uuid);
     if (data == null) {
-      ELog.e(
-          "Error fetching data whilst trying to get push notification for $uuid");
+      ELog.e("Error fetching data whilst trying to get push notification for $uuid");
       return null;
     }
     Map decoded = jsonDecode(data);
@@ -67,12 +65,12 @@ class User {
       ELog.e("Cannot send $uuid a notification! No token!");
       return;
     }
-    OfflineHandler().sendNotification(OfflineHandler.bodyBuilder(
-        targetToken: (await getPushNotificationCode())!,
-        data: {
-          'message-type': 'new_message',
-          'time_of': DateTime.now().millisecondsSinceEpoch.toString()
-        }));
+    // OfflineHandler().sendNotification(OfflineHandler.bodyBuilder(
+    //     targetToken: (await getPushNotificationCode())!,
+    //     data: {
+    //       'message-type': 'new_message',
+    //       'time_of': DateTime.now().millisecondsSinceEpoch.toString()
+    //     }));
   }
 
   void _createEncrypter() {
@@ -97,14 +95,12 @@ class User {
 
   void sendMessage(String message) {
     List<String> encryptedPieces = getEncryptedPieces(message);
-    activeSocket!
-        .add(jsonEncode({MagicNumber.MESSAGE_COMPILATION: encryptedPieces}));
+    activeSocket!.add(jsonEncode({MagicNumber.MESSAGE_COMPILATION: encryptedPieces}));
   }
 
   Future<void> addToCache(String message) async {
     List<String> encryptedPieces = getEncryptedPieces(message);
-    String encryptedMessage =
-        jsonEncode({MagicNumber.MESSAGE_COMPILATION: encryptedPieces});
+    String encryptedMessage = jsonEncode({MagicNumber.MESSAGE_COMPILATION: encryptedPieces});
     String? dataCol = await KeyHandler().getUserDataColumn(uuid);
     if (dataCol == null) {
       ELog.e("Unable to get $uuid data column.");
@@ -117,8 +113,7 @@ class User {
     }
     cache.add(encryptedMessage);
     decoded['cache'] = cache;
-    await KeyHandler()
-        .updateUserDataColumn(uuid, data: decoded); // update cache
+    await KeyHandler().updateUserDataColumn(uuid, data: decoded); // update cache
     await sendNotification();
   }
 
@@ -140,8 +135,7 @@ class User {
         activeSocket!.add(msg);
       }
       decoded['cache'] = [];
-      await KeyHandler()
-          .updateUserDataColumn(uuid, dataString: jsonEncode(decoded));
+      await KeyHandler().updateUserDataColumn(uuid, dataString: jsonEncode(decoded));
       (await KeyHandler().getUserDataColumn(uuid))!.toString();
     }
   }

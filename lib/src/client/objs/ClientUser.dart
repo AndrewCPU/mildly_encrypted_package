@@ -51,6 +51,10 @@ class ClientUser {
     encrypter = EncryptionUtil.createEncrypter(remoteKey, privateKey);
   }
 
+  Future<void> deleteChat() async {
+    await ClientKeyManager().deleteContact(EncryptedClient.getInstance()!.serverUrl, uuid);
+  }
+
   Future<String> sendChatMessage(String messageContent, {Map? specialData, Map? localDifference}) async {
     String messageUuid = Uuid().v4();
     Map data = {ClientComponent.TIME: DateTime.now().millisecondsSinceEpoch, ClientComponent.MESSAGE_UUID: messageUuid};
@@ -200,8 +204,7 @@ class ClientUser {
       ELog.e("Something went wrong with a file upload! to $uuid");
       return;
     }
-    String newLocalCopy =
-        directory.path + Platform.pathSeparator + profilePictureLocalPath.substring(profilePictureLocalPath.lastIndexOf(Platform.pathSeparator) + 1);
+    String newLocalCopy = directory.path + profilePictureLocalPath.substring(profilePictureLocalPath.lastIndexOf(Platform.pathSeparator) + 1);
     await File(profilePictureLocalPath).copy(newLocalCopy);
     await sendDataPacket(jsonEncode({ClientComponent.PROFILE_PICTURE_UPDATE: uploadedPath}));
     UpdateNotificationRegistry.getInstance().newPicture(this, newLocalCopy);

@@ -45,9 +45,9 @@ class ChatMessageEvent implements MessageHandler {
     await MessageStorage().insertMessage(EncryptedClient.getInstance()!.serverUrl, keyID ?? from,
         messageUuid: messageUuid, senderUuid: from, messageContent: messageContent, messageData: messageMetaData, timeMs: timeMs);
     if (keyID != null) {
-      UpdateNotificationRegistry.getInstance().newMessage((await ClientManagement.getInstance().getGroupChat(keyID))!, messageUuid);
+      UpdateNotificationRegistry.getInstance().newMessage((await (await ClientManagement.getInstance()).getGroupChat(keyID))!, messageUuid);
     } else {
-      UpdateNotificationRegistry.getInstance().newMessage((await ClientManagement.getInstance().getUser(from))!, messageUuid);
+      UpdateNotificationRegistry.getInstance().newMessage((await (await ClientManagement.getInstance()).getUser(from))!, messageUuid);
     }
 
     Map data = (await ClientKeyManager().getUserData(this.from.client.serverUrl, keyID ?? from))!;
@@ -65,7 +65,7 @@ class ChatMessageEvent implements MessageHandler {
       }
     }
 
-    await (await ClientManagement.getInstance().getFromUUID(keyID ?? from))?.markAsDelivered(messageUuid);
+    await (await (await ClientManagement.getInstance()).getFromUUID(keyID ?? from))?.markAsDelivered(messageUuid);
     ELog.i("Received $messageContent from $from with metaData $messageMetaData" + (keyID != null ? " in Group Chat $keyID" : ""));
   }
 

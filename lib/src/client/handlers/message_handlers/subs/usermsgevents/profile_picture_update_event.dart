@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
@@ -30,6 +31,7 @@ class ProfilePictureUpdateEvent implements MessageHandler {
     ELog.i("Received file to $decryptedPath");
     await this.from.updateProfilePicturePath(decryptedPath);
     await this.from.init();
+    CoreEventRegistry().notify(CoreEventType.PROFILE_PICTURE_UPDATE, data: from);
   }
 
   @override

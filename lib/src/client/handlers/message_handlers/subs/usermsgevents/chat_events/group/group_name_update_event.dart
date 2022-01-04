@@ -23,7 +23,7 @@ class GroupNameUpdateEvent implements MessageHandler {
   void handle(String message, String from, {String? keyID}) async {
     Map map = jsonDecode(message);
     String newName = map[ClientComponent.GROUP_NAME_UPDATE];
-    ClientGroupChat? group = ((await ClientManagement.getInstance().getGroupChat(keyID!)));
+    ClientGroupChat? group = ((await (await ClientManagement.getInstance()).getGroupChat(keyID!)));
 
     if (group == null) {
       ELog.e("Cannot find group to update name.");
@@ -31,5 +31,6 @@ class GroupNameUpdateEvent implements MessageHandler {
     }
     await group.updateUsername(newName);
     await group.init();
+    CoreEventRegistry().notify(CoreEventType.NAME_UPDATE, data: from);
   }
 }

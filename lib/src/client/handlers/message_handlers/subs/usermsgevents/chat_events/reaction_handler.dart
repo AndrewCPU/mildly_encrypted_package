@@ -101,10 +101,10 @@ class ReactionHandler implements MessageHandler {
       await removeAnyExistingReactionsFromUser(from, messageUuid, keyID: keyID);
     }
     if(keyID != null){
-      UpdateNotificationRegistry.getInstance().messageUpdate((await ClientManagement.getInstance().getGroupChat(keyID))!, messageUuid);
+      UpdateNotificationRegistry.getInstance().messageUpdate((await (await ClientManagement.getInstance()).getGroupChat(keyID))!, messageUuid);
     }
     else{
-      UpdateNotificationRegistry.getInstance().messageUpdate((await ClientManagement.getInstance().getUser(from))!, messageUuid);
+      UpdateNotificationRegistry.getInstance().messageUpdate((await (await ClientManagement.getInstance()).getUser(from))!, messageUuid);
     }
   }
 }

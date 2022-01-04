@@ -25,7 +25,7 @@ class LeaveGroupChatEvent implements MessageHandler {
     EncryptedClient client = EncryptedClient.getInstance()!;
     int leaveTime = map[ClientComponent.LEAVE_GROUP];
     await ClientKeyManager().removeUserFromGroupChat(client.serverUrl, keyID!, from, leaveTime);
-    ClientGroupChat chat = ((await ClientManagement.getInstance().getGroupChat(keyID))!);
+    ClientGroupChat chat = ((await (await ClientManagement.getInstance()).getGroupChat(keyID))!);
     await chat.init();
   }
 }

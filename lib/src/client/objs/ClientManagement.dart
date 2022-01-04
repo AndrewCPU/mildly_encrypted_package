@@ -7,17 +7,23 @@ import 'ClientUser.dart';
 
 class ClientManagement {
   static final ClientManagement _instance = ClientManagement._internal();
-  ClientManagement._internal();
-  static ClientManagement getInstance() {
+
+  static Future<ClientManagement> getInstance() async {
+    if (!_instance.initialized) {
+      await _instance._init();
+    }
     return _instance;
   }
 
-  final List<ClientUser> userChats = [];
-  final List<ClientGroupChat> groupChats = [];
+  ClientManagement._internal();
 
-  Future<void> init() async {
-    userChats.clear();
-    groupChats.clear();
+  List<ClientUser> _userChats = [];
+  List<ClientGroupChat> _groupChats = [];
+  bool initialized = false;
+  Future<void> _init() async {
+    initialized = true;
+    _userChats.clear();
+    _groupChats.clear();
     EncryptedClient client = EncryptedClient.getInstance()!;
     String serverIP = client.serverUrl;
     Map<String, List<String>> allUuids = await ClientKeyManager().getAllContactUUIDs(serverIP);
@@ -25,40 +31,60 @@ class ClientManagement {
     List<String> groups = allUuids['groups']!;
     for (String uuid in users) {
       if (uuid == 'server') continue;
-      userChats.add((await ClientUser.loadUser(client, uuid))!);
+      _userChats.add((await ClientUser.loadUser(client, uuid))!);
     }
     for (String uuid in groups) {
       if (uuid == 'server') continue;
-      groupChats.add((await ClientGroupChat.loadUser(client, uuid))!);
+      _groupChats.add((await ClientGroupChat.loadUser(client, uuid))!);
     }
   }
 
-  Future<List<ClientUser>> getAllUsers() async {
-    return List.from(userChats)..addAll(groupChats);
+  Future<void> updateChats() async {
+    List<ClientUser> _userChats = [];
+    List<ClientGroupChat> _groupChats = [];
+    EncryptedClient client = EncryptedClient.getInstance()!;
+    String serverIP = client.serverUrl;
+    Map<String, List<String>> allUuids = await ClientKeyManager().getAllContactUUIDs(serverIP);
+    List<String> users = allUuids['users']!;
+    List<String> groups = allUuids['groups']!;
+    for (String uuid in users) {
+      if (uuid == 'server') continue;
+      _userChats.add((await ClientUser.loadUser(client, uuid))!);
+    }
+    for (String uuid in groups) {
+      if (uuid == 'server') continue;
+      _groupChats.add((await ClientGroupChat.loadUser(client, uuid))!);
+    }
+    this._userChats = _userChats;
+    this._groupChats = _groupChats;
+  }
+
+  List<ClientUser> getAllUsers() {
+    return List.from(_userChats)..addAll(_groupChats);
   }
 
   Future<ClientUser?> getUser(String uuid) async {
-    for (ClientUser user in userChats) {
+    for (ClientUser user in _userChats) {
       if (user.uuid == uuid) {
         return user;
       }
     }
     ClientUser? user = await ClientUser.loadUser(EncryptedClient.getInstance()!, uuid);
     if (user != null) {
-      userChats.add(user);
+      _userChats.add(user);
     }
     return user;
   }
 
   Future<ClientGroupChat?> getGroupChat(String uuid) async {
-    for (ClientGroupChat user in groupChats) {
+    for (ClientGroupChat user in _groupChats) {
       if (user.uuid == uuid) {
         return user;
       }
     }
     ClientGroupChat? user = await ClientGroupChat.loadUser(EncryptedClient.getInstance()!, uuid);
     if (user != null) {
-      groupChats.add(user);
+      _groupChats.add(user);
     }
     return user;
   }
@@ -77,12 +103,12 @@ class ClientManagement {
   }
 
   Future<void> deleteGroupChat(ClientGroupChat chat) async {
-    groupChats.remove(chat);
+    _groupChats.remove(chat);
     await ClientKeyManager().deleteContact(chat.client.serverUrl, chat.uuid);
   }
 
   Future<void> deleteUserChat(ClientUser chat) async {
-    userChats.remove(chat);
+    _userChats.remove(chat);
     await ClientKeyManager().deleteContact(chat.client.serverUrl, chat.uuid);
   }
 }

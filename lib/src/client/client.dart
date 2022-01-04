@@ -67,7 +67,7 @@ class EncryptedClient {
     SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
     await _save.setString('username', username);
     _myUsername = username;
-    List<ClientUser> allChats = await ClientManagement.getInstance().getAllUsers();
+    List<ClientUser> allChats = await (await ClientManagement.getInstance()).getAllUsers();
     for (ClientUser chat in allChats) {
       await chat.sendUsernameUpdate(username);
     }
@@ -92,7 +92,7 @@ class EncryptedClient {
   void finishedAuthentication() {
     () async {
       await MessageStorage().init();
-      await ClientManagement.getInstance().init();
+      (await ClientManagement.getInstance());
       _authenticated = true;
       onConnect(this);
     }.call();

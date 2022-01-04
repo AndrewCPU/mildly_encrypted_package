@@ -102,7 +102,7 @@ class MessageStorage {
     for (Map result in results) {
       response.add(builder(
           sender: result['sender_uuid'],
-          senderName: ((await ClientManagement.getInstance().getUser(result['sender_uuid']))?.username ?? result['sender_uuid']),
+          senderName: ((await (await ClientManagement.getInstance()).getUser(result['sender_uuid']))?.username ?? result['sender_uuid']),
           messageUuid: result['message_uuid'],
           time: result['message_time'],
           messageContent: result['message_content'],

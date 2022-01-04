@@ -1,6 +1,8 @@
 class ClientComponent {
   static final String RAND_INT = 'rii';
 
+  static final String KEY_EXCHANGE_COMPLETE = 'kic';
+
   static final String TYPING_INDICATOR = 'typ';
 
   static final String FILE_URL = 'irul';

@@ -38,7 +38,7 @@ class GroupChatInviteEvent implements MessageHandler {
         randInt: privateKeyString.hashCode,
         remoteRandInt: publicKeyString.hashCode,
         data: {'members': members, 'seeds': seeds});
-    ClientGroupChat groupChat = ((await ClientManagement.getInstance().getGroupChat(groupUuid))!);
+    ClientGroupChat groupChat = ((await (await ClientManagement.getInstance()).getGroupChat(groupUuid))!);
 
     await groupChat.init();
     await groupChat.updateUsername(groupChatName);

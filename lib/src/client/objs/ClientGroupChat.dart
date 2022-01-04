@@ -54,7 +54,7 @@ class ClientGroupChat extends ClientUser {
         randInt: privateKeyString.hashCode,
         remoteRandInt: publicKeyString.hashCode,
         data: {'members': members, 'seeds': seeds});
-    ClientGroupChat groupChat = (await ClientManagement.getInstance().getGroupChat(uuid))!;
+    ClientGroupChat groupChat = (await (await ClientManagement.getInstance()).getGroupChat(uuid))!;
     await groupChat.init();
     await groupChat.updateUsername(groupChatName);
 
@@ -69,7 +69,7 @@ class ClientGroupChat extends ClientUser {
       if (member == client.uuid!) {
         continue;
       }
-      ClientUser? user = ((await ClientManagement.getInstance().getUser(member)));
+      ClientUser? user = (((await (await ClientManagement.getInstance()).getUser(member))));
       if (user == null) {
         ELog.e("Unable to add $member to Group $uuid.");
         continue;
@@ -97,7 +97,7 @@ class ClientGroupChat extends ClientUser {
       ClientComponent.GROUP_MEMBERS: [uuid, ...members],
       ClientComponent.GROUP_UUID: this.uuid
     };
-    ClientUser user = ((await ClientManagement.getInstance().getUser(uuid)))!;
+    ClientUser user = ((await (await ClientManagement.getInstance()).getUser(uuid)))!;
 
     await user.sendDataPacket(jsonEncode(messageToNewUser));
     await sendDataPacket(jsonEncode({ClientComponent.ADD_TO_GROUP: uuid}));

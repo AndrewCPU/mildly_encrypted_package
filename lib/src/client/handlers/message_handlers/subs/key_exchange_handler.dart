@@ -38,7 +38,7 @@ class KeyExchangeHandler implements MessageHandler {
     if (await ClientKeyManager().hasAllValidKeys(serverIP, from)) {
       ELog.i("Key exchange complete with $from");
       if (!(await ClientKeyManager().isRandIntDone(serverIP, from))) {
-        ClientUser user = ((await ClientManagement.getInstance().getUser(from)))!;
+        ClientUser user = ((await (await ClientManagement.getInstance()).getUser(from)))!;
         await user.sendFileEncryptionKeyPart();
       }
     }

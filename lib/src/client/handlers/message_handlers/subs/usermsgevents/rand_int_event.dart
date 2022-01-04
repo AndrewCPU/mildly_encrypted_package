@@ -33,13 +33,13 @@ class RandIntEvent implements MessageHandler {
       await user.sendFileEncryptionKeyPart();
       if ((await ClientKeyManager().haveWeReceivedRandInt(serverIP, from))) {
         ELog.i("File encryption key exchange complete!");
-        await user.sendUsernameUpdate(EncryptedClient.getInstance()!.getMyUsername());
-        await user.sendProfilePictureUpdate(EncryptedClient.getInstance()!.getMyProfilePicturePath());
+        (await (await ClientManagement.getInstance()).getUser(from))!
+            .sendDataPacket(jsonEncode({ClientComponent.KEY_EXCHANGE_COMPLETE: DateTime.now().millisecondsSinceEpoch}));
       }
     } else {
       ELog.i("File encryption key exchange complete!");
-      await user.sendUsernameUpdate(EncryptedClient.getInstance()!.getMyUsername());
-      await user.sendProfilePictureUpdate(EncryptedClient.getInstance()!.getMyProfilePicturePath());
+      (await (await ClientManagement.getInstance()).getUser(from))!
+          .sendDataPacket(jsonEncode({ClientComponent.KEY_EXCHANGE_COMPLETE: DateTime.now().millisecondsSinceEpoch}));
     }
   }
 }

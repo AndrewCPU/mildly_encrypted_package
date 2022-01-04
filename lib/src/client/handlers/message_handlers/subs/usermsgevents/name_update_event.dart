@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
@@ -21,6 +22,7 @@ class NameUpdateEvent implements MessageHandler {
     String newName = map[ClientComponent.NAME_UPDATE];
     await this.from.updateUsername(newName);
     await this.from.init();
+    CoreEventRegistry().notify(CoreEventType.NAME_UPDATE, data: from);
   }
 
   @override

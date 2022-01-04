@@ -9,6 +9,7 @@ import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/su
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_events/read_status_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_events/typing_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_message_event.dart';
+import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/full_key_exchange_complete_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/group_chat_invite_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/message_update_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/name_update_event.dart';
@@ -39,11 +40,11 @@ class UserMessageHandler implements MessageHandler {
   void handle(String message, String from, {String? keyID}) async {
     ClientUser? user;
     if (keyID != null) {
-      user = ((await ClientManagement.getInstance().getGroupChat(keyID)));
+      user = ((await (await ClientManagement.getInstance()).getGroupChat(keyID)));
 
       ELog.i("Using group chat key to decrypt.");
     } else {
-      user = ((await ClientManagement.getInstance().getUser(from)));
+      user = ((await (await ClientManagement.getInstance()).getUser(from)));
       ELog.i("Using individual user key to decrypt.");
     }
     if (user == null) {
@@ -64,7 +65,8 @@ class UserMessageHandler implements MessageHandler {
       AddToGroupEvent(),
       GroupImageUpdateEvent(),
       GroupNameUpdateEvent(),
-      TypingHandler()
+      TypingHandler(),
+      KeyExchangeCompleteEvent(),
     ];
 
     for (MessageHandler handler in handlers) {

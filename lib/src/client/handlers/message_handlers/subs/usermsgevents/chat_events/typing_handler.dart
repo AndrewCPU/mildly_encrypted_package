@@ -37,9 +37,9 @@ class TypingHandler implements MessageHandler {
     data['typing'] = typing;
     await ClientKeyManager().updateContact(EncryptedClient.getInstance()!.serverUrl, chatID, data: data);
     if (keyID != null) {
-      UpdateNotificationRegistry.getInstance().typingChange((await ClientManagement.getInstance().getGroupChat(keyID))!);
+      UpdateNotificationRegistry.getInstance().typingChange((await (await ClientManagement.getInstance()).getGroupChat(keyID))!);
     } else {
-      UpdateNotificationRegistry.getInstance().typingChange((await ClientManagement.getInstance().getUser(from))!);
+      UpdateNotificationRegistry.getInstance().typingChange((await (await ClientManagement.getInstance()).getUser(from))!);
     }
   }
 }
