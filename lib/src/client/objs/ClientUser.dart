@@ -12,6 +12,8 @@ import 'package:mildly_encrypted_package/src/client/objs/encryption_pack.dart';
 import 'package:mildly_encrypted_package/src/client/objs/message_update_builder.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
 import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
+import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
+import 'package:mildly_encrypted_package/src/utils/save_file.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../logging/ELog.dart';
@@ -27,6 +29,9 @@ import 'ServerObject.dart';
 class ClientUser {
   static Future<ClientUser?> loadUser(EncryptedClient client, String uuid) async {
     ClientKeyManager keyManager = ClientKeyManager();
+    if (EncryptedClient.getInstance() != null && EncryptedClient.getInstance()!.uuid == uuid) {
+      return null;
+    }
     if (!(await keyManager.doesContactExist(client.serverUrl, uuid))) {
       ELog.e("Client does not exist. Cannot be loaded ($uuid)");
       return null;
@@ -43,8 +48,8 @@ class ClientUser {
   late String username;
   late String profilePicturePath;
 
-  late rsa.RSAPrivateKey? privateKey;
-  late rsa.RSAPublicKey? remoteKey;
+  rsa.RSAPrivateKey? privateKey;
+  rsa.RSAPublicKey? remoteKey;
   late Encrypter encrypter;
 
   void _createEncrypter() {
@@ -78,7 +83,20 @@ class ClientUser {
         timeMs: data[ClientComponent.TIME]);
     await sendDataPacket(jsonEncode(messageMap));
     UpdateNotificationRegistry.getInstance().newMessage(this, messageUuid);
+
+    await checkIfNeedProfileUpdate();
+
     return messageUuid;
+  }
+
+  Future<void> checkIfNeedProfileUpdate() async {
+    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
+
+    if (!_save.containsKey(uuid)) {
+      await sendUsernameUpdate(client.getMyUsername());
+      await sendProfilePictureUpdate(client.getMyProfilePicturePath());
+      await _save.setString(uuid, 'sent!');
+    }
   }
 
   Future<void> sendDataPacket(String message) async {
@@ -105,16 +123,73 @@ class ClientUser {
   }
 
   Future<void> sendFile(String path) async {
-    Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid + Platform.pathSeparator);
-    String encryptFile = await EncryptionUtil.encryptFileToPath(path, this, directory.path);
+    Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid);
+    String encryptFile = await EncryptionUtil.encryptFileToPath(path, this, await getMultPW(), directory.path);
     String? uploadedPath = await FileDownload.uploadFile(encryptFile);
     if (uploadedPath == null) {
       ELog.e("Something went wrong with a file upload! to $uuid");
       return;
     }
-    String newLocalCopy = directory.path + Platform.pathSeparator + path.substring(path.lastIndexOf(Platform.pathSeparator) + 1);
+    String newLocalCopy = directory.path + path.substring(path.lastIndexOf(Platform.pathSeparator));
     await File(path).copy(newLocalCopy);
     await sendChatMessage('', specialData: {ClientComponent.FILE_URL: uploadedPath}, localDifference: {ClientComponent.FILE_URL: newLocalCopy});
+  }
+
+  Future<void> acceptReactionAddition(String uuidReacting, String messageID, String reaction) async {
+    Map? currentMessageData = await MessageStorage().getMessage<Map>(
+        client.serverUrl, uuid, messageID, ({required data, required messageContent, required messageUuid, required sender, required time}) => data);
+    if (currentMessageData == null) {
+      ELog.e("Received update request for a message that does not exist. $uuidReacting > $messageID");
+      return;
+    }
+    Map reactions = {};
+    if (currentMessageData.containsKey('reactions')) {
+      reactions = currentMessageData['reactions'];
+    }
+    reactions[uuidReacting] = reaction;
+    currentMessageData['reactions'] = reactions;
+    await MessageStorage().updateMessage(client.serverUrl, uuid, messageID, currentMessageData);
+  }
+
+  Future<void> acceptReactionRemoval(String uuidReacting, String messageID, String reaction) async {
+    Map? currentMessageData = await MessageStorage().getMessage<Map>(
+        client.serverUrl, uuid, messageID, ({required data, required messageContent, required messageUuid, required sender, required time}) => data);
+    if (currentMessageData == null) {
+      ELog.e("Received update request for a message that does not exist. $uuidReacting > $messageID");
+      return;
+    }
+    Map reactions = {};
+    if (currentMessageData.containsKey('reactions')) {
+      reactions = currentMessageData['reactions'];
+    }
+    if (reactions.containsKey(uuidReacting)) {
+      reactions.remove(uuidReacting);
+    }
+    currentMessageData['reactions'] = reactions;
+
+    await MessageStorage().updateMessage(client.serverUrl, uuid, messageID, currentMessageData);
+  }
+
+  Future<void> acceptReadReceiptChange(String uuidRead, String messageID, String state) async {
+    Map? currentMessageData = await MessageStorage().getMessage<Map>(
+        client.serverUrl, uuid, messageID, ({required data, required messageContent, required messageUuid, required sender, required time}) => data);
+    if (currentMessageData == null) {
+      ELog.e("Received update request for a message that does not exist. $uuidRead > $messageID");
+      return;
+    }
+    Map reads = {};
+    if (currentMessageData.containsKey('read_status')) {
+      reads = currentMessageData['read_status'];
+    }
+    if (reads.containsKey(uuidRead)) {
+      if (reads[uuidRead] == ClientComponent.READ_STATUS_READ) {
+        ELog.i("Blocking database update for read status. User has already read this message");
+        return;
+      }
+    }
+    reads[uuidRead] = state;
+    currentMessageData['read_status'] = reads;
+    await MessageStorage().updateMessage(client.serverUrl, uuid, messageID, currentMessageData);
   }
 
   Future<void> reactTo(String messageID, String reaction) async {
@@ -124,7 +199,8 @@ class ClientUser {
         .withAction(ClientComponent.ADD_REACTION)
         .withValue(reaction)
         .buildMessage();
-    // await ReactionHandler().handle(jsonEncode(buildData), EncryptedClient.getInstance()!.uuid!, keyID: uuid);
+    await acceptReactionRemoval(client.uuid!, messageID, '');
+    await acceptReactionAddition(client.uuid!, messageID, reaction);
     await sendMessageUpdate(buildData);
   }
 
@@ -135,7 +211,7 @@ class ClientUser {
         .withAction(ClientComponent.REMOVE_REACTION)
         .withValue(reaction)
         .buildMessage();
-    // await ReactionHandler().handle(jsonEncode(buildData), EncryptedClient.getInstance()!.uuid!, keyID: uuid);
+    await acceptReactionRemoval(client.uuid!, messageID, '');
     await sendMessageUpdate(buildData);
   }
 
@@ -147,7 +223,7 @@ class ClientUser {
         .withValue(ClientComponent.READ_STATUS_DELIVERED)
         .buildMessage();
     // await ReadStatusHandler().handle(jsonEncode(buildData), EncryptedClient.getInstance()!.uuid!, keyID: uuid);
-
+    await acceptReadReceiptChange(client.uuid!, messageID, ClientComponent.READ_STATUS_DELIVERED);
     await sendMessageUpdate(buildData);
   }
 
@@ -158,6 +234,8 @@ class ClientUser {
         .withAction(ClientComponent.NEW_READ_STATUS)
         .withValue(ClientComponent.READ_STATUS_READ)
         .buildMessage();
+    await acceptReadReceiptChange(client.uuid!, messageID, ClientComponent.READ_STATUS_READ);
+
     // await ReadStatusHandler().handle(jsonEncode(buildData), EncryptedClient.getInstance()!.uuid!, keyID: uuid);
     await sendMessageUpdate(buildData);
   }
@@ -198,7 +276,7 @@ class ClientUser {
 
   Future<void> sendProfilePictureUpdate(String profilePictureLocalPath) async {
     Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid + Platform.pathSeparator);
-    String encryptFile = await EncryptionUtil.encryptFileToPath(profilePictureLocalPath, this, directory.path);
+    String encryptFile = await EncryptionUtil.encryptFileToPath(profilePictureLocalPath, this, await getMultPW(), directory.path);
     String? uploadedPath = await FileDownload.uploadFile(encryptFile);
     if (uploadedPath == null) {
       ELog.e("Something went wrong with a file upload! to $uuid");
@@ -211,13 +289,7 @@ class ClientUser {
   }
 
   Future<List<T>?> getMessages<T>(
-      T Function(
-              {required String sender,
-              required String senderName,
-              required String messageUuid,
-              required int time,
-              required String messageContent,
-              required Map data})
+      T Function({required ClientUser? sender, required String messageUuid, required int time, required String messageContent, required Map data})
           builder) async {
     return MessageStorage().getMessages(client.serverUrl, uuid, builder);
   }
@@ -229,15 +301,38 @@ class ClientUser {
       return false;
     }
     if (!data.containsKey('typing')) {
-      ELog.e('Cannot find typing data in user data for ' + (uuid ?? this.uuid));
+      // ELog.e('Cannot find typing data in user data for ' + (uuid ?? this.uuid));
       return false;
     }
     Map typing = data['typing']!;
     if (!typing.containsKey(uuid ?? this.uuid)) {
-      ELog.e('User has not typed before therefore they are not typing. ' + (uuid ?? this.uuid));
+      // ELog.e('User has not typed before therefore they are not typing. ' + (uuid ?? this.uuid));
       return false;
     }
     return DateTime.now().millisecondsSinceEpoch < typing[uuid ?? this.uuid] + MagicNumber.TYPING_TIMEOUT_IN_MS;
+  }
+
+  Future<void> setMessageSize(String messageUUID, double width, double height) async {
+    Map? data = await MessageStorage().getMessage(
+        client.serverUrl, uuid, messageUUID, ({required data, required messageContent, required messageUuid, required sender, required time}) => data);
+    if (data == null) {
+      ELog.e("Cannot update size of non existant message.");
+      return;
+    }
+    data['width'] = width.toInt();
+    data['height'] = height.toInt();
+    await MessageStorage().updateMessage(client.serverUrl, uuid, messageUUID, data);
+  }
+
+  Future<void> setMessageThumbnail(String messageUUID, String thumbnailPath) async {
+    Map? data = await MessageStorage().getMessage(
+        client.serverUrl, uuid, messageUUID, ({required data, required messageContent, required messageUuid, required sender, required time}) => data);
+    if (data == null) {
+      ELog.e("Cannot update thumbnail of non existant message.");
+      return;
+    }
+    data['thumb'] = thumbnailPath;
+    await MessageStorage().updateMessage(client.serverUrl, uuid, messageUUID, data);
   }
 
   Future<void> sendTypingIndicator() async {
@@ -248,6 +343,13 @@ class ClientUser {
 
   Future<void> deleteMessageByID(String messageUUID) async {
     MessageStorage().deleteMessage(client.serverUrl, uuid, messageUUID);
+  }
+
+  Future<int> getMultPW() async {
+    int mult = (CryptoUtils.encodeRSAPublicKeyToPem(remoteKey as rsa.RSAPublicKey).hashCode *
+        (await ClientKeyManager().getColumnData(client.serverUrl, uuid, 'public_key')).hashCode);
+    mult += (await getRandInt() * await getRemoteRandInt());
+    return mult;
   }
 
   Future<void> init() async {

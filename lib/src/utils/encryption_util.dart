@@ -15,12 +15,12 @@ import 'magic_nums.dart';
 import 'string_util.dart';
 
 class EncryptionUtil {
-  static Future<String> encryptFileToPath(String filePath, ClientUser clientUser, String targetDirectory) async {
-    return await EncryptImage.getImageEncrypter().encryptImage(filePath, clientUser, targetDirectory);
+  static Future<String> encryptFileToPath(String filePath, ClientUser clientUser, int mult, String targetDirectory) async {
+    return await EncryptImage.getImageEncrypter().encryptImage(filePath, clientUser, mult, targetDirectory);
   }
 
-  static Future<String> decryptImageToPath(String filePath, ClientUser clientUser, String targetDirectory) async {
-    return await EncryptImage.getImageEncrypter().decryptImageToPath(filePath, clientUser, targetDirectory);
+  static Future<String> decryptImageToPath(String filePath, ClientUser clientUser, int mult, String targetDirectory) async {
+    return await EncryptImage.getImageEncrypter().decryptImageToPath(filePath, clientUser, mult, targetDirectory);
   }
 
   static bool isKeyValid(KeyType type, String pemKey) {

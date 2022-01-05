@@ -21,16 +21,14 @@ class ServerMessageHandler {
   }
 
   void handle(EncryptedClient client, String data) {
-    if (!JSONValidate.isValidJSON(data,
-        requiredKeys: [MagicNumber.MESSAGE_COMPILATION])) {
+    print(data);
+    if (!JSONValidate.isValidJSON(data, requiredKeys: [MagicNumber.MESSAGE_COMPILATION])) {
       ELog.e("Server message handler was passed invalid data.");
       return;
     }
 
     Map encryptedMap = jsonDecode(data);
-    String decodedComp = EncryptionUtil.decryptParts(
-        (encryptedMap[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>(),
-        serverObject.encrypter);
+    String decodedComp = EncryptionUtil.decryptParts((encryptedMap[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>(), serverObject.encrypter);
     Map map = jsonDecode(decodedComp);
     String from = map[MagicNumber.FROM_USER];
     String? keyID;

@@ -22,6 +22,8 @@ class KeyExchangeHandler implements MessageHandler {
 
   @override
   void handle(String message, String from, {String? keyID}) async {
+    print(message);
+
     Map map = jsonDecode(message);
     var serverIP = EncryptedClient.getInstance()!.serverUrl;
     if (await ClientKeyManager().doesContactExist(serverIP, from)) {

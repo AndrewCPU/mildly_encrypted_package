@@ -11,7 +11,7 @@ import 'package:shelf_router/shelf_router.dart';
 import 'package:uuid/uuid.dart';
 
 class FileUploadServer {
-  String webAddress = "https://dialapp.chat/";
+  String webAddress = "https://dialchat.app/";
   // String webAddress = '192.168.1.5';
   // String imageDirectory = "./encrypted_images/";
 
@@ -42,8 +42,8 @@ class FileUploadServer {
       String newName = Uuid().v4() + "-" + fileName;
       ELog.i("File Upload: " + newName);
       await File("/var/www/html/encrypted_images/" + newName).writeAsBytes(data);
-
-      return Response.ok(jsonEncode({'upload': 'ok'}), headers: {"uri": webAddress + "/encrypted_images/" + newName});
+      print(webAddress + "encrypted_images/" + newName);
+      return Response.ok(jsonEncode({'upload': 'ok'}), headers: {"uri": webAddress + "encrypted_images/" + newName});
     } else {
       final description = StringBuffer('Regular multipart request\n');
 

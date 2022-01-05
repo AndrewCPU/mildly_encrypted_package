@@ -56,20 +56,39 @@ class EncryptedClient {
 
   bool isConnected() {
     if (getChannel() == null) {
+      _authenticated = false;
+
       return false;
     } else if (getChannel()!.closeCode != null) {
+      _authenticated = false;
+
       return false;
     }
     return true;
+  }
+
+  Future<void> disconnect() async {
+    if (isConnected()) {
+      _authenticated = false;
+      getChannel()?.innerWebSocket?.close(9876);
+      ELog.i("Disconnecting from server.");
+    }
+  }
+
+  Future<void> reconnect() async {
+    if (!isConnected()) {
+      ELog.i("Reconnecting to server.");
+      await connect();
+    }
   }
 
   Future<void> updateMyUsername(String username) async {
     SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
     await _save.setString('username', username);
     _myUsername = username;
-    List<ClientUser> allChats = await (await ClientManagement.getInstance()).getAllUsers();
+    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
     for (ClientUser chat in allChats) {
-      await chat.sendUsernameUpdate(username);
+      chat.sendUsernameUpdate(username);
     }
     //todo send packet out
   }
@@ -78,7 +97,10 @@ class EncryptedClient {
     SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
     await _save.setString('profile_path', path);
     _myProfilePicturePath = path;
-    //todo send packet out
+    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
+    for (ClientUser chat in allChats) {
+      chat.sendProfilePictureUpdate(path);
+    }
   }
 
   String getMyProfilePicturePath() {
@@ -111,15 +133,18 @@ class EncryptedClient {
     } catch (e, s) {
       ELog.i("Unable to connect WebSocket");
       ELog.e(e);
-      ELog.e(s);
+      _authenticated = false;
+      // ELog.e(s);
       return;
     }
 
     _handler = WebSocketDataHandler(this);
     _channel!.stream.listen(_handler!.handleData, onDone: () {
       ELog.i("Web socket finished.");
+      _authenticated = false;
     }, onError: (e, s) {
       ELog.e("An error with the WebSocket: $e");
+      _authenticated = false;
     });
     _handler!.introduce();
     _channel!.innerWebSocket?.pingInterval = const Duration(seconds: 5);

@@ -16,6 +16,7 @@ import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
 import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
 import 'package:mildly_encrypted_package/src/utils/encryption_util.dart';
 import 'package:mildly_encrypted_package/src/utils/magic_nums.dart';
+import 'package:mildly_encrypted_package/src/utils/save_file.dart';
 
 import 'package:pointycastle/asymmetric/api.dart' as rsa;
 import 'package:pointycastle/api.dart' as asym;
@@ -26,6 +27,9 @@ import 'ServerObject.dart';
 class ClientGroupChat extends ClientUser {
   static Future<ClientGroupChat?> loadUser(EncryptedClient client, String keyID) async {
     ClientKeyManager keyManager = ClientKeyManager();
+    if (EncryptedClient.getInstance() != null && EncryptedClient.getInstance()!.uuid == keyID) {
+      return null;
+    }
     if (!(await keyManager.doesContactExist(client.serverUrl, keyID))) {
       ELog.e("Group does not exist. Cannot be loaded ($keyID)");
       return null;
@@ -76,6 +80,8 @@ class ClientGroupChat extends ClientUser {
       }
       await user.sendDataPacket(jsonEncode(message));
     }
+    (await (await ClientManagement.getInstance()).updateChats());
+    CoreEventRegistry().notify(CoreEventType.KEY_EXCHANGE_COMPLETE, data: uuid);
 
     return groupChat;
   }
@@ -86,6 +92,8 @@ class ClientGroupChat extends ClientUser {
   Future<void> leaveGroupChat() async {
     Map message = {ClientComponent.LEAVE_GROUP: DateTime.now().millisecondsSinceEpoch};
     await sendDataPacket(jsonEncode(message));
+    await deleteChat();
+    CoreEventRegistry().notify(CoreEventType.KEY_EXCHANGE_COMPLETE, data: uuid);
     //todo delete group chat
   }
 
@@ -106,7 +114,7 @@ class ClientGroupChat extends ClientUser {
   }
 
   Future<void> sendGroupNameUpdate(String newGroupName) async {
-    Map map = {ClientComponent.NAME_UPDATE: newGroupName};
+    Map map = {ClientComponent.GROUP_NAME_UPDATE: newGroupName};
     await sendDataPacket(jsonEncode(map));
     await updateUsername(newGroupName);
     UpdateNotificationRegistry.getInstance().newName(this, newGroupName);
@@ -114,7 +122,7 @@ class ClientGroupChat extends ClientUser {
 
   Future<void> sendGroupImageUpdate(String newGroupImageLocalPath) async {
     Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid + Platform.pathSeparator);
-    String encryptFile = await EncryptionUtil.encryptFileToPath(newGroupImageLocalPath, this, directory.path);
+    String encryptFile = await EncryptionUtil.encryptFileToPath(newGroupImageLocalPath, this, await getMultPW(), directory.path);
     String? uploadedPath = await FileDownload.uploadFile(encryptFile);
     if (uploadedPath == null) {
       ELog.e("Something went wrong with a file upload! to $uuid");
@@ -152,21 +160,39 @@ class ClientGroupChat extends ClientUser {
       return false;
     }
     Map typing = data['typing']!;
-    if (!typing.containsKey(uuid)) {
-      ELog.e('User has not typed before therefore they are not typing. ' + (uuid));
-      return false;
-    }
-    for(String key in typing.keys){
-        if(DateTime.now().millisecondsSinceEpoch < typing[key] + MagicNumber.TYPING_TIMEOUT_IN_MS){
-          return true;
-        }
+
+    for (String key in typing.keys) {
+      if (DateTime.now().millisecondsSinceEpoch < typing[key] + MagicNumber.TYPING_TIMEOUT_IN_MS) {
+        return true;
+      }
     }
     return false;
   }
 
   @override
+  Future<void> checkIfNeedProfileUpdate() async {
+    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
+    int totalB = 0;
+    for (String member in members) {
+      totalB += member.hashCode;
+    }
+
+    if (!_save.containsKey(uuid)) {
+      await sendUsernameUpdate(client.getMyUsername());
+      await sendProfilePictureUpdate(client.getMyProfilePicturePath());
+      await _save.setString(uuid, totalB.toString());
+    } else if (_save.containsKey(uuid)) {
+      if ((await _save.getString(uuid)) != totalB.toString()) {
+        await sendUsernameUpdate(client.getMyUsername());
+        await sendProfilePictureUpdate(client.getMyProfilePicturePath());
+        await _save.setString(uuid, totalB.toString());
+      }
+    }
+  }
+
+  @override
   Future<void> init() async {
-    super.init();
     members = (await ClientKeyManager().getGroupChatMembers(client.serverUrl, uuid))!;
+    await super.init();
   }
 }

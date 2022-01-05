@@ -84,13 +84,7 @@ class MessageStorage {
   Future<List<T>?> getMessages<T>(
       String serverIP,
       String chatID,
-      T Function(
-              {required String sender,
-              required String senderName,
-              required String messageUuid,
-              required int time,
-              required String messageContent,
-              required Map data})
+      T Function({required ClientUser? sender, required String messageUuid, required int time, required String messageContent, required Map data})
           builder) async {
     await _initIfNot();
     if (!(await doesChatTableExist(serverIP, chatID))) {
@@ -101,8 +95,7 @@ class MessageStorage {
     List<T> response = [];
     for (Map result in results) {
       response.add(builder(
-          sender: result['sender_uuid'],
-          senderName: ((await (await ClientManagement.getInstance()).getUser(result['sender_uuid']))?.username ?? result['sender_uuid']),
+          sender: ((await (await ClientManagement.getInstance()).getUser(result['sender_uuid']))),
           messageUuid: result['message_uuid'],
           time: result['message_time'],
           messageContent: result['message_content'],

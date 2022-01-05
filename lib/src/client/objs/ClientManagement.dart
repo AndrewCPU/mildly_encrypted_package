@@ -31,10 +31,13 @@ class ClientManagement {
     List<String> groups = allUuids['groups']!;
     for (String uuid in users) {
       if (uuid == 'server') continue;
+      if (uuid == client.uuid) continue;
       _userChats.add((await ClientUser.loadUser(client, uuid))!);
     }
     for (String uuid in groups) {
       if (uuid == 'server') continue;
+      if (uuid == client.uuid) continue;
+
       _groupChats.add((await ClientGroupChat.loadUser(client, uuid))!);
     }
   }
@@ -49,10 +52,13 @@ class ClientManagement {
     List<String> groups = allUuids['groups']!;
     for (String uuid in users) {
       if (uuid == 'server') continue;
+      if (uuid == client.uuid) continue;
+
       _userChats.add((await ClientUser.loadUser(client, uuid))!);
     }
     for (String uuid in groups) {
       if (uuid == 'server') continue;
+      if (uuid == client.uuid) continue;
       _groupChats.add((await ClientGroupChat.loadUser(client, uuid))!);
     }
     this._userChats = _userChats;
@@ -61,6 +67,18 @@ class ClientManagement {
 
   List<ClientUser> getAllUsers() {
     return List.from(_userChats)..addAll(_groupChats);
+  }
+
+  List<ClientUser> getCommunicableUsers() {
+    List<ClientUser> allUsers = List.from(getAllUsers());
+    List<ClientUser> cannotCommunicate = [];
+    for (ClientUser u in allUsers) {
+      if (u.privateKey == null) {
+        cannotCommunicate.add(u);
+      }
+    }
+    allUsers.removeWhere((element) => cannotCommunicate.contains(element));
+    return allUsers;
   }
 
   Future<ClientUser?> getUser(String uuid) async {

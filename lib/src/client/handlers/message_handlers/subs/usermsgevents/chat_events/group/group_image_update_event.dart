@@ -33,8 +33,8 @@ class GroupImageUpdateEvent implements MessageHandler {
       ELog.e("Cannot find group to update name.");
       return;
     }
-    String downloadedPath = await FileDownload.downloadFile(newImageURL, keyID, GetPath.getInstance().path + Platform.pathSeparator + (keyID));
-    String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, group, GetPath.getInstance().path + Platform.pathSeparator + (keyID));
+    String downloadedPath = await FileDownload.downloadFile(newImageURL, GetPath.getInstance().path + Platform.pathSeparator + (keyID));
+    String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, group, await group.getMultPW(), GetPath.getInstance().path + Platform.pathSeparator + (keyID));
     await File(downloadedPath).delete();
     ELog.i("Received file to $decryptedPath");
     await group.updateProfilePicturePath(decryptedPath);

@@ -54,11 +54,13 @@ class UserMessageHandler implements MessageHandler {
     Map map = jsonDecode(message);
     String decryptedMessage = user.decryptFromUser((map[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>());
 
+    ClientUser? fromUser = (await (await ClientManagement.getInstance()).getUser(from));
+
     List<MessageHandler> handlers = [
       ChatMessageEvent(user),
-      RandIntEvent(user),
-      NameUpdateEvent(user),
-      ProfilePictureUpdateEvent(user),
+      RandIntEvent(fromUser!),
+      NameUpdateEvent(fromUser),
+      ProfilePictureUpdateEvent(fromUser),
       MessageUpdateEvent(),
       GroupChatInviteEvent(),
       LeaveGroupChatEvent(),

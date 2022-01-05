@@ -31,6 +31,16 @@ class GroupChatInviteEvent implements MessageHandler {
     String privateKeyString = CryptoUtils.encodeRSAPrivateKeyToPem(keyPair.privateKey as rsa.RSAPrivateKey);
 
     EncryptedClient client = EncryptedClient.getInstance()!;
+
+    for (String member in members) {
+      if (!(await ClientKeyManager().doesContactExist(client.serverUrl, member))) {
+        await ClientKeyManager().createContact(
+          client.serverUrl,
+          member,
+        );
+      }
+    }
+
     await ClientKeyManager().createContact(client.serverUrl, groupUuid,
         publicKey: publicKeyString,
         privateKey: privateKeyString,
@@ -42,6 +52,8 @@ class GroupChatInviteEvent implements MessageHandler {
 
     await groupChat.init();
     await groupChat.updateUsername(groupChatName);
+    (await (await ClientManagement.getInstance()).updateChats());
+    CoreEventRegistry().notify(CoreEventType.KEY_EXCHANGE_COMPLETE, data: groupUuid);
   }
 
   @override

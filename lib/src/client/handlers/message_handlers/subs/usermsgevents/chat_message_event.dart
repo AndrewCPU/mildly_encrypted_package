@@ -33,11 +33,21 @@ class ChatMessageEvent implements MessageHandler {
     int timeMs = messageMetaData[ClientComponent.TIME];
     messageMetaData.remove(ClientComponent.MESSAGE_UUID);
     messageMetaData.remove(ClientComponent.TIME);
+
+    ClientUser multSource;
+    if (keyID != null) {
+      multSource = ((await (await ClientManagement.getInstance()).getGroupChat(keyID))!);
+    } else {
+      multSource = ((await (await ClientManagement.getInstance()).getUser(from))!);
+    }
+
     if (messageMetaData.containsKey(ClientComponent.FILE_URL)) {
       String url = messageMetaData[ClientComponent.FILE_URL];
-      String downloadedPath = await FileDownload.downloadFile(url, keyID ?? from, GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from));
-      String decryptedPath =
-          await EncryptionUtil.decryptImageToPath(downloadedPath, this.from, GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from));
+      String downloadedPath = await FileDownload.downloadFile(url, GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from));
+      print(downloadedPath);
+      String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, this.from, await multSource.getMultPW(),
+          GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from) + Platform.pathSeparator);
+      print(decryptedPath);
       await File(downloadedPath).delete();
       messageMetaData[ClientComponent.FILE_URL] = decryptedPath;
       ELog.i("Received file to $decryptedPath");

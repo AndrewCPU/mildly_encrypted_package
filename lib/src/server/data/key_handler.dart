@@ -34,7 +34,7 @@ class KeyHandler {
 
   Future<void> init() async {
     database ??= await SQLFactory().openDatabase(
-      join('C:\\Users\\stein\\Documents\\GitHub\\mildly_encrypted_package\\databases\\', 'key_data.db'),
+      join('/root/key_database/', 'key_data.db'),
     );
     await _createKeyLog();
     return;

@@ -25,8 +25,17 @@ class ProfilePictureUpdateEvent implements MessageHandler {
   void handle(String message, String from, {String? keyID}) async {
     Map map = jsonDecode(message);
     String newPicture = map[ClientComponent.PROFILE_PICTURE_UPDATE];
-    String downloadedPath = await FileDownload.downloadFile(newPicture, from, GetPath.getInstance().path + Platform.pathSeparator + (from));
-    String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, this.from, GetPath.getInstance().path + Platform.pathSeparator + (from));
+    String downloadedPath = await FileDownload.downloadFile(newPicture, GetPath.getInstance().path + Platform.pathSeparator + (from));
+
+    ClientUser multSource;
+    if (keyID != null) {
+      multSource = (await (await ClientManagement.getInstance()).getGroupChat(keyID))!;
+    } else {
+      multSource = (await (await ClientManagement.getInstance()).getUser(from))!;
+    }
+
+    String decryptedPath = await EncryptionUtil.decryptImageToPath(
+        downloadedPath, this.from, await multSource.getMultPW(), GetPath.getInstance().path + Platform.pathSeparator + (from));
     await File(downloadedPath).delete();
     ELog.i("Received file to $decryptedPath");
     await this.from.updateProfilePicturePath(decryptedPath);

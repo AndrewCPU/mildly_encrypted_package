@@ -6,23 +6,24 @@ import 'package:mildly_encrypted_package/src/utils/magic_nums.dart';
 import 'package:mime/mime.dart';
 
 class FileDownload {
-  static Future<String> downloadFile(String url, String chatID, String saveDirectory) async {
+  static Future<String> downloadFile(String url, String saveDirectory) async {
     http.Client client = new http.Client();
     var req = await client.get(Uri.parse(url));
     var bytes = req.bodyBytes;
     String dir = saveDirectory;
-    String fileName = url.split("/").last;
-    Directory directory = Directory("$dir/$chatID/");
-    if (!(await directory.exists())) {
-      await directory.create(recursive: true);
+    if (!dir.endsWith(Platform.pathSeparator)) {
+      dir += Platform.pathSeparator;
     }
-    File file = File('$dir/$chatID/$fileName');
-    await file.parent.create(recursive: true);
+    print(url);
+    String fileName = url.split("/").last;
+    File file = File('${dir}$fileName');
+    await file.create(recursive: true);
     await file.writeAsBytes(bytes);
     return file.path;
   }
 
   static Future<String?> uploadFile(String path) async {
+    print("uploaded $path");
     String? mimeType = lookupMimeType(path.split("/").last);
     mimeType ??= "application/octet-stream";
     var request = http.MultipartRequest("POST", Uri.parse("http://${MagicNumber.SERVER_ADDRESS}:8080/upload/"));
@@ -30,6 +31,7 @@ class FileDownload {
     http.StreamedResponse response = await request.send();
     if (response.statusCode == 200) {
       print("Uploaded!");
+      print(response.headers['uri']);
       return response.headers['uri']!;
     } else {
       return null;

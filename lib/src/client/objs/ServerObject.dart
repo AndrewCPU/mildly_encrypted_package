@@ -34,10 +34,8 @@ class ServerObject {
   }
 
   Future<void> _init() async {
-    remoteKey =
-        await ClientKeyManager().getRSARemotePublicKey(client.serverUrl, uuid);
-    privateKey =
-        await ClientKeyManager().getRSAPrivateKey(client.serverUrl, uuid);
+    remoteKey = await ClientKeyManager().getRSARemotePublicKey(client.serverUrl, uuid);
+    privateKey = await ClientKeyManager().getRSAPrivateKey(client.serverUrl, uuid);
     _createEncrypter();
   }
 
@@ -46,24 +44,29 @@ class ServerObject {
   }
 
   Future<void> sendMessage(String message) async {
-    List<String> encryptedBlock =
-        EncryptionUtil.toEncryptedPieces(message, encrypter);
+    List<String> encryptedBlock = EncryptionUtil.toEncryptedPieces(message, encrypter);
     Map m = {MagicNumber.MESSAGE_COMPILATION: encryptedBlock};
     client.getChannel()!.sink.add(jsonEncode(m));
   }
 
   Future<void> exchangeKeys(String toUser) async {
-    asym.AsymmetricKeyPair keys = CryptoUtils.generateRSAKeyPair();
-    String public =
-        CryptoUtils.encodeRSAPublicKeyToPem(keys.publicKey as rsa.RSAPublicKey);
-    String private = CryptoUtils.encodeRSAPrivateKeyToPem(
-        keys.privateKey as rsa.RSAPrivateKey);
+    String public;
+    String private;
     if (await ClientKeyManager().doesContactExist(client.serverUrl, toUser)) {
-      await ClientKeyManager().updateContact(client.serverUrl, toUser,
-          publicKey: public, privateKey: private);
+      if (await ClientKeyManager().getColumnData(client.serverUrl, toUser, 'public_key') != '') {
+        public = await ClientKeyManager().getColumnData(client.serverUrl, toUser, 'public_key');
+        private = await ClientKeyManager().getColumnData(client.serverUrl, toUser, 'private_key');
+      } else {
+        asym.AsymmetricKeyPair keys = CryptoUtils.generateRSAKeyPair();
+        public = CryptoUtils.encodeRSAPublicKeyToPem(keys.publicKey as rsa.RSAPublicKey);
+        private = CryptoUtils.encodeRSAPrivateKeyToPem(keys.privateKey as rsa.RSAPrivateKey);
+        await ClientKeyManager().updateContact(client.serverUrl, toUser, publicKey: public, privateKey: private);
+      }
     } else {
-      await ClientKeyManager().createContact(client.serverUrl, toUser,
-          publicKey: public, privateKey: private);
+      asym.AsymmetricKeyPair keys = CryptoUtils.generateRSAKeyPair();
+      public = CryptoUtils.encodeRSAPublicKeyToPem(keys.publicKey as rsa.RSAPublicKey);
+      private = CryptoUtils.encodeRSAPrivateKeyToPem(keys.privateKey as rsa.RSAPrivateKey);
+      await ClientKeyManager().createContact(client.serverUrl, toUser, publicKey: public, privateKey: private);
     }
 
     Map toSend = {
