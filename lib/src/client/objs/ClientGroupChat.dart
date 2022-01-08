@@ -138,7 +138,7 @@ class ClientGroupChat extends ClientUser {
 
   @override
   Future<void> sendDataPacket(String message) async {
-    List<String> encryptedBlocks = EncryptionUtil.toEncryptedPieces(message, encrypter);
+    List<String> encryptedBlocks = await EncryptionUtil.toEncryptedPieces(message, encrypter);
     Map send = {
       MagicNumber.MESSAGE_COMPILATION: encryptedBlocks,
       MagicNumber.TO_USER: List.from(members)..remove(client.uuid!),

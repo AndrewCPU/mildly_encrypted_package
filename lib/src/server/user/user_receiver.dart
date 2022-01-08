@@ -15,51 +15,52 @@ class UserReceiver {
   //{'m': [ewoiweur oiwe roweiur woeiru woer u i], 't': ['userID'], 'k': 'id'} >
   void handleData(dynamic data) async {
     // raw data from websocket
-    if (!JSONValidate.isValidJSON(data,
-        requiredKeys: [MagicNumber.MESSAGE_COMPILATION])) {
+    if (!JSONValidate.isValidJSON(data, requiredKeys: [MagicNumber.MESSAGE_COMPILATION])) {
       ELog.e("User ${user.uuid} sent invalid data.");
       return;
     }
     Map<String, dynamic> jsonEnc = jsonDecode(data);
-    List<String> serverEncryptedList =
-        (jsonEnc[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>();
+    List<String> serverEncryptedList = (jsonEnc[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>();
 
-    String decodedJson =
-        (EncryptionUtil.decryptParts(serverEncryptedList, user.encrypter));
+    String decodedJson = await (EncryptionUtil.decryptParts(serverEncryptedList, user.encrypter));
     if (!JSONValidate.isValidJSON(decodedJson)) {
       ELog.e("Received invalid json.");
       return;
     }
-    if (JSONValidate.isValidJSON(decodedJson,
-        requiredKeys: [MagicNumber.ACTIVE])) {
+    Map json = jsonDecode(decodedJson);
+
+    if (JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.CLIENT_FINISHED_AUTHENTICATION])) {
       user.unloadCache();
+      bool b = json[MagicNumber.CLIENT_FINISHED_AUTHENTICATION];
+      user.showOnlineStatus = b;
       return;
     }
 
-    Map json = jsonDecode(decodedJson);
-
-    if (JSONValidate.isValidJSON(decodedJson,
-        requiredKeys: [MagicNumber.PUBLIC_KEY_DELIM, MagicNumber.TO_USER])) {
+    if (JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.PUBLIC_KEY_DELIM, MagicNumber.TO_USER])) {
       // this is a key exchange.
-      User? targetUser =
-          await UserHandler().getOrLoadUser(json[MagicNumber.TO_USER][0]);
+      User? targetUser = await UserHandler().getOrLoadUser(json[MagicNumber.TO_USER][0]);
       if (targetUser == null) {
-        ELog.e(
-            "${user.uuid} tried to send a key exchange to an invalid user. (${json[MagicNumber.TO_USER][0]})");
+        ELog.e("${user.uuid} tried to send a key exchange to an invalid user. (${json[MagicNumber.TO_USER][0]})");
         return;
       }
-      Map intraOutMap = {
-        MagicNumber.FROM_USER: user.uuid,
-        MagicNumber.PUBLIC_KEY_DELIM: json[MagicNumber.PUBLIC_KEY_DELIM]
-      };
+      Map intraOutMap = {MagicNumber.FROM_USER: user.uuid, MagicNumber.PUBLIC_KEY_DELIM: json[MagicNumber.PUBLIC_KEY_DELIM]};
       String intraOut = jsonEncode(intraOutMap);
       targetUser.receiver.intraserverMessage(intraOut);
       ELog.i("Handling key exchange.");
       return;
     }
+    if (JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.ONLINE])) {
+      String query = json[MagicNumber.ONLINE];
+      User? user = UserHandler().getUser(uuid: query);
+      bool online = false;
+      if (user != null) {
+        online = user.isOnline();
+      }
+      await this.user.sendMessage(jsonEncode({MagicNumber.ONLINE: query, MagicNumber.ACTIVE: online}));
+      return;
+    }
 
-    if (!JSONValidate.isValidJSON(decodedJson,
-        requiredKeys: [MagicNumber.TO_USER, MagicNumber.MESSAGE_COMPILATION])) {
+    if (!JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.TO_USER, MagicNumber.MESSAGE_COMPILATION])) {
       ELog.e("Encrypted data is invalid. ${user.uuid}");
       return;
     }
@@ -70,15 +71,11 @@ class UserReceiver {
       keyID = json[MagicNumber.KEY_ID];
     }
     if (to.length > 1 && keyID == null) {
-      ELog.e(
-          "User ${user.uuid} tried to send a message to multiple users without a keyID.");
+      ELog.e("User ${user.uuid} tried to send a message to multiple users without a keyID.");
       return;
     }
 
-    Map<String, dynamic> outData = {
-      MagicNumber.MESSAGE_COMPILATION: json[MagicNumber.MESSAGE_COMPILATION],
-      MagicNumber.FROM_USER: user.uuid
-    };
+    Map<String, dynamic> outData = {MagicNumber.MESSAGE_COMPILATION: json[MagicNumber.MESSAGE_COMPILATION], MagicNumber.FROM_USER: user.uuid};
     if (keyID != null) {
       outData[MagicNumber.KEY_ID] = keyID;
     }
@@ -88,8 +85,7 @@ class UserReceiver {
     for (String uuid in to) {
       User? targetUser = await UserHandler().getOrLoadUser(uuid);
       if (targetUser == null) {
-        ELog.e(
-            "${user.uuid} tried to send a message to an invalid user. ($uuid)");
+        ELog.e("${user.uuid} tried to send a message to an invalid user. ($uuid)");
         continue;
       }
       targetUser.receiver.intraserverMessage(intraOut);
@@ -97,7 +93,7 @@ class UserReceiver {
   }
 
   void intraserverMessage(String out) {
-    if (user.isOnline()) {
+    if (user.hasActiveBackgroundConnection()) {
       user.sendMessage(out);
     } else {
       user.addToCache(out);

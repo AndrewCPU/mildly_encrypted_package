@@ -41,8 +41,23 @@ class ClientUser {
     return user;
   }
 
+  Map<String, double> _fileUploadProgress = {};
+  Map<String, double> _fileDownloadProgress = {};
+
+  void updateFileUploadProgress(String path, double val) {
+    _fileUploadProgress[path] = val;
+    UpdateNotificationRegistry().fileUploadProgress(this);
+  }
+
+  void updateFileDownloadProgress(String path, double val) {
+    _fileDownloadProgress[path] = val;
+    UpdateNotificationRegistry().fileDownloadProgress(this);
+  }
+
   String uuid;
   EncryptedClient client;
+  String? status;
+
   ClientUser.internal(this.uuid, this.client);
 
   late String username;
@@ -51,6 +66,7 @@ class ClientUser {
   rsa.RSAPrivateKey? privateKey;
   rsa.RSAPublicKey? remoteKey;
   late Encrypter encrypter;
+  bool online = false;
 
   void _createEncrypter() {
     encrypter = EncryptionUtil.createEncrypter(remoteKey, privateKey);
@@ -100,14 +116,24 @@ class ClientUser {
   }
 
   Future<void> sendDataPacket(String message) async {
-    List<String> encryptedBlocks = EncryptionUtil.toEncryptedPieces(message, encrypter);
+    List<String> encryptedBlocks = await EncryptionUtil.toEncryptedPieces(message, encrypter);
     Map send = {
       MagicNumber.MESSAGE_COMPILATION: encryptedBlocks,
       MagicNumber.TO_USER: [uuid]
     }; // user encrypted data
     String toSendJson = jsonEncode(send);
-    ServerObject obj = await ServerObject.getInstance(client);
-    await obj.sendMessage(toSendJson);
+    //check that we are authenticated before trying to send data packet. if we're not queue the message and wait for reconnect to go through
+    if (!EncryptedClient.getInstance()!.isConnected() || !EncryptedClient.getInstance()!.isAuthenticated()) {
+      client.offlineQueue.add(toSendJson);
+      await client.reconnect();
+    } else {
+      ServerObject obj = await ServerObject.getInstance(client);
+      await obj.sendMessage(toSendJson);
+    }
+  }
+
+  Future<void> sendStatusUpdate(String status) async {
+    sendDataPacket(jsonEncode({ClientComponent.STATUS_UPDATE: status}));
   }
 
   Future<int> getRandInt() async {
@@ -118,14 +144,17 @@ class ClientUser {
     return int.parse(await ClientKeyManager().getColumnData(client.serverUrl, uuid, 'remote_rand_key'));
   }
 
-  String decryptFromUser(List<String> messageParts) {
-    return EncryptionUtil.decryptParts(messageParts, encrypter);
+  Future<String> decryptFromUser(List<String> messageParts) async {
+    return await EncryptionUtil.decryptParts(messageParts, encrypter);
   }
 
   Future<void> sendFile(String path) async {
     Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid);
     String encryptFile = await EncryptionUtil.encryptFileToPath(path, this, await getMultPW(), directory.path);
-    String? uploadedPath = await FileDownload.uploadFile(encryptFile);
+    String? uploadedPath = await FileDownload.uploadFile(encryptFile, uploadProgress: (val) {
+      updateFileUploadProgress(path, val);
+    });
+    _fileUploadProgress.remove(path);
     if (uploadedPath == null) {
       ELog.e("Something went wrong with a file upload! to $uuid");
       return;
@@ -133,6 +162,19 @@ class ClientUser {
     String newLocalCopy = directory.path + path.substring(path.lastIndexOf(Platform.pathSeparator));
     await File(path).copy(newLocalCopy);
     await sendChatMessage('', specialData: {ClientComponent.FILE_URL: uploadedPath}, localDifference: {ClientComponent.FILE_URL: newLocalCopy});
+  }
+
+  double getSendProgress() {
+    double val = 0.0;
+    for (String key in _fileUploadProgress.keys) {
+      val += _fileUploadProgress[key]!;
+    }
+    if (val == 0.0) {
+      return 0.0;
+    } else {
+      val /= _fileUploadProgress.keys.length;
+      return val;
+    }
   }
 
   Future<void> acceptReactionAddition(String uuidReacting, String messageID, String reaction) async {
@@ -342,7 +384,8 @@ class ClientUser {
   }
 
   Future<void> deleteMessageByID(String messageUUID) async {
-    MessageStorage().deleteMessage(client.serverUrl, uuid, messageUUID);
+    await MessageStorage().deleteMessage(client.serverUrl, uuid, messageUUID);
+    UpdateNotificationRegistry.getInstance().newMessage(this, messageUUID);
   }
 
   Future<int> getMultPW() async {
@@ -363,6 +406,12 @@ class ClientUser {
       profilePicturePath = data['profile_picture'];
     } else {
       profilePicturePath = "null";
+    }
+
+    if (data.containsKey('status')) {
+      status = data['status'];
+    } else {
+      status = '';
     }
     remoteKey = await ClientKeyManager().getRSARemotePublicKey(client.serverUrl, uuid);
     privateKey = await ClientKeyManager().getRSAPrivateKey(client.serverUrl, uuid);

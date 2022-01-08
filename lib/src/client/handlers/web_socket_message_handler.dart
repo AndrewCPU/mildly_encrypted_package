@@ -16,9 +16,9 @@ class WebSocketDataHandler {
   }
 
   void handleData(dynamic data) {
+    client.lastReceived = DateTime.now().millisecondsSinceEpoch;
     if (!client.isAuthenticated()) {
-      HandshakeHandler()
-          .handleHandshake(client.getChannel()!, client, data: data);
+      HandshakeHandler().handleHandshake(client.getChannel()!, client, data: data);
       return;
     } else {
       () async {

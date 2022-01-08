@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
 import 'package:shelf/shelf.dart';
@@ -19,9 +20,14 @@ class FileUploadServer {
     () async {
       var app = Router();
       app.post('/upload/', _handler);
+      var chain = Platform.script.resolve('/root/mild_serv/ssl/wss.p12').toFilePath();
+      var key = Platform.script.resolve('/root/mild_serv/ssl/generated-private-key-no-bom.txt').toFilePath();
+      var context = SecurityContext(withTrustedRoots: true)
+        ..useCertificateChain(chain, password: 'BigD@ddyClan')
+        ..usePrivateKey(key);
       // app.mount("/encrypted_images/",
       //     ShelfVirtualDirectory(imageDirectory, listDirectory: true).handler);
-      var server = await shelf_io.serve(app, '0.0.0.0', 8080);
+      var server = await shelf_io.serve(app, '0.0.0.0', 8080, securityContext: context);
       server.defaultResponseHeaders.add('Access-Control-Allow-Origin', '*');
     }.call();
   }
@@ -32,16 +38,21 @@ class FileUploadServer {
       // final description = StringBuffer('Parsed form multipart request\n');
       List<int> data = [];
       var fileName = "";
+      Uint8List? list;
       await for (final formData in request.multipartFormData) {
-        var monkey = await formData.part.toList();
-        for (var monk in monkey) {
-          data.addAll(monk);
-        }
+        // var monkey = await formData.part.toList();
+        list = await formData.part.readBytes();
+        // print(monkey.)
+        // for (var monk in monkey) {
+        //   data.addAll(monk);
+        // }
         fileName = formData.filename!;
       }
+      // File file = File('a');
+      // file.writeAsBytes(list!.toList());
       String newName = Uuid().v4() + "-" + fileName;
       ELog.i("File Upload: " + newName);
-      await File("/var/www/html/encrypted_images/" + newName).writeAsBytes(data);
+      await File("/var/www/html/encrypted_images/" + newName).writeAsBytes(list!);
       print(webAddress + "encrypted_images/" + newName);
       return Response.ok(jsonEncode({'upload': 'ok'}), headers: {"uri": webAddress + "encrypted_images/" + newName});
     } else {

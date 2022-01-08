@@ -66,7 +66,7 @@ class HandshakeHandler {
 
     String ourPrivate = await ClientKeyManager().getColumnData(client.serverUrl, 'server', 'private_key');
 
-    String message = EncryptionUtil.decryptParts(messageComp, EncryptionUtil.createEncrypter(null, CryptoUtils.rsaPrivateKeyFromPem(ourPrivate)));
+    String message = await EncryptionUtil.decryptParts(messageComp, EncryptionUtil.createEncrypter(null, CryptoUtils.rsaPrivateKeyFromPem(ourPrivate)));
 
     if (JSONValidate.isValidJSON(message, requiredKeys: [MagicNumber.STATUS])) {
       await _handleStatus(channel, client, message);
@@ -83,11 +83,12 @@ class HandshakeHandler {
     int statusCode = map[MagicNumber.STATUS];
     if (statusCode == StatusCode.SUCCESS) {
       ELog.i("Successfully identified with server.");
+      ServerObject object = await client.getServerObject();
       client.finishedAuthentication();
-      ServerObject object = await ServerObject.getInstance(client);
-      Timer(Duration(seconds: 2), () {
-        object.sendMessage(jsonEncode({MagicNumber.ACTIVE: 'yes'}));
-      });
+      await object.sendMessage(jsonEncode(
+          {MagicNumber.CLIENT_FINISHED_AUTHENTICATION: client.timeout == null})); // if timeout is null we are "online" otherwise do not show us please.
+      // Timer(Duration(seconds: 1), () async {
+      //         });
       return;
     } else if (statusCode == StatusCode.FAILED_TO_CREATE_USER) {
       ELog.e("Invalid user ID.");
@@ -133,6 +134,9 @@ class HandshakeHandler {
       ELog.e("Server responded with invalid data during handshake! $message");
       return;
     }
+    if (channel.closeCode != null) {
+      return;
+    }
     Map jsonMessage = jsonDecode(message);
     String serverPublicKey;
     if (jsonMessage.containsKey(MagicNumber.PUBLIC_KEY_DELIM)) {
@@ -153,7 +157,10 @@ class HandshakeHandler {
     int codeB = jsonMessage[MagicNumber.CODE_2_DELIM];
     Map response = {MagicNumber.CODE_1_DELIM: codeA, MagicNumber.CODE_2_DELIM: codeB, MagicNumber.PUSH_NOTIFICATION_DELIM: client.pushToken};
     String responseJson = jsonEncode(response);
-    List<String> responseParts = EncryptionUtil.toEncryptedPieces(responseJson, encrypter);
+    List<String> responseParts = await EncryptionUtil.toEncryptedPieces(responseJson, encrypter);
+    if (channel.closeCode != null) {
+      return;
+    }
     channel.sink.add(jsonEncode({MagicNumber.MESSAGE_COMPILATION: responseParts}));
   }
 }

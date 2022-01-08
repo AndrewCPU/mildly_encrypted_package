@@ -55,7 +55,7 @@ class UIDatabase implements SDatabase {
 
   @override
   Future<void> delete(String table, {String? where, List<Object?>? whereArgs}) async {
-    await wrapped.delete(table, where: where, whereArgs: whereArgs);
+    await wrapped.delete('`$table`', where: where, whereArgs: whereArgs);
   }
 
   @override

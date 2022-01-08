@@ -28,66 +28,72 @@ class UpdateNotificationRegistry {
     return notifiers;
   }
 
-  void messageUpdate(ClientUser chat, String messageID){
-      List<ClientNotifier> listeners = getListeners([chat.uuid]);
-      for(ClientNotifier listener in listeners){
-        if(chat is ClientGroupChat){
-          listener.groupMessageUpdate(chat, messageID);
-        }
-        else{
-          listener.userMessageUpdate(chat, messageID);
-        }
+  void fileUploadProgress(ClientUser chat) {
+    getListeners([chat.uuid]).forEach((element) {
+      element.sendProgressUpdate();
+    });
+  }
+
+  void fileDownloadProgress(ClientUser chat) {
+    getListeners([chat.uuid]).forEach((element) {
+      element.downloadProgressUpdate();
+    });
+  }
+
+  void messageUpdate(ClientUser chat, String messageID) {
+    List<ClientNotifier> listeners = getListeners([chat.uuid]);
+    for (ClientNotifier listener in listeners) {
+      if (chat is ClientGroupChat) {
+        listener.groupMessageUpdate(chat, messageID);
+      } else {
+        listener.userMessageUpdate(chat, messageID);
       }
+    }
   }
 
   void newMessage(ClientUser chat, String messageID) {
     List<ClientNotifier> listeners = getListeners([chat.uuid]);
-    for(ClientNotifier listener in listeners){
-      if(chat is ClientGroupChat){
+    for (ClientNotifier listener in listeners) {
+      if (chat is ClientGroupChat) {
         listener.newGroupMessage(chat, messageID);
-      }
-      else{
+      } else {
         listener.newUserMessage(chat, messageID);
       }
     }
   }
 
-  void newPicture(ClientUser user, String path){
+  void newPicture(ClientUser user, String path) {
     List<ClientNotifier> listeners = getListeners([user.uuid]);
-    for(ClientNotifier listener in listeners){
-      if(user is ClientGroupChat){
+    for (ClientNotifier listener in listeners) {
+      if (user is ClientGroupChat) {
         listener.groupProfileChange(user, path);
-      }
-      else{
+      } else {
         listener.userProfileChange(user, path);
       }
     }
   }
 
-  void newName(ClientUser user, String path){
+  void newName(ClientUser user, String path) {
     List<ClientNotifier> listeners = getListeners([user.uuid]);
-    for(ClientNotifier listener in listeners){
-      if(user is ClientGroupChat){
+    for (ClientNotifier listener in listeners) {
+      if (user is ClientGroupChat) {
         listener.groupNameChange(user, path);
-      }
-      else{
+      } else {
         listener.userNameChange(user, path);
       }
     }
   }
 
-  void typingChange(ClientUser user){
+  void typingChange(ClientUser user) {
     List<ClientNotifier> listeners = getListeners([user.uuid]);
-    for(ClientNotifier listener in listeners){
-      if(user is ClientGroupChat){
+    for (ClientNotifier listener in listeners) {
+      if (user is ClientGroupChat) {
         listener.groupTypingIndicator(user);
-      }
-      else{
+      } else {
         listener.userTypingIndicator(user);
       }
     }
   }
-
 
   void registerListener(ClientNotifier notifier) {
     listeners.add(notifier);

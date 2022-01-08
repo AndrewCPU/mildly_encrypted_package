@@ -14,4 +14,7 @@ abstract class ClientNotifier {
   void newGroupMessage(ClientGroupChat user, String messageUuid);
   void groupMessageUpdate(ClientGroupChat user, String messageUuid);
   void groupTypingIndicator(ClientGroupChat user);
+
+  void sendProgressUpdate();
+  void downloadProgressUpdate();
 }

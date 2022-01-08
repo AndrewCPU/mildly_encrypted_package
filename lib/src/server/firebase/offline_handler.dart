@@ -15,14 +15,14 @@ class OfflineHandler {
 
   String? notificationKey;
 
-  static Map bodyBuilder(
-      {required String targetToken,
-      String? notificationBody,
-      String? notificationTitle,
-      Map? data}) {
-    Map body = {};
+  static Map<dynamic, dynamic> bodyBuilder({required String targetToken, String? notificationBody, String? notificationTitle, Map? data}) {
+    Map<dynamic, dynamic> body = {};
     body['message'] = {};
-    Map messageBody = body['message'];
+    Map messageBody = (body['message']);
+    messageBody['webpush'] = {
+      "headers": {"Urgency": "high"}
+    };
+    messageBody['android'] = {"priority": "high"};
     messageBody['token'] = targetToken;
     if (notificationBody != null || notificationTitle != null) {
       messageBody['notification'] = {};
@@ -48,13 +48,9 @@ class OfflineHandler {
     }
 
     var body = json.encode(notificationBody);
-    var headers = {
-      "Content-Type": "application/json; charset=utf-8",
-      "Authorization": "Bearer " + notificationKey!
-    };
+    var headers = {"Content-Type": "application/json; charset=utf-8", "Authorization": "Bearer " + notificationKey!};
     var response = await http.post(
-      Uri.parse(
-          "https://fcm.googleapis.com/v1/projects/dial-87d46/messages:send"),
+      Uri.parse("https://fcm.googleapis.com/v1/projects/dial-87d46/messages:send"),
       headers: headers,
       body: body,
     );
@@ -70,7 +66,7 @@ class OfflineHandler {
       ELog.e("Invalid auth code! Getting a new one.");
       return;
     }
-    print(response.body);
+    ELog.i("Sending a push notification.");
     return;
   }
 
@@ -79,20 +75,17 @@ class OfflineHandler {
     var scopes = ["https://www.googleapis.com/auth/firebase.messaging"];
 
     var client = http.Client();
-    AccessCredentials credentials =
-        await obtainAccessCredentialsViaServiceAccount(
-            accountCredentials, scopes, client);
+    AccessCredentials credentials = await obtainAccessCredentialsViaServiceAccount(accountCredentials, scopes, client);
 
     client.close();
     return credentials;
   }
 
   void getAuthBearer(Function() finishedCallback) {
-    File('./serviceAccountKey.json').readAsString().then((String contents) {
+    File('.pn/serviceAccountKey.json').readAsString().then((String contents) {
       Map credentialMap = jsonDecode(contents);
       () async {
-        notificationKey =
-            (await _obtainCredentials(credentialMap)).accessToken.data;
+        notificationKey = (await _obtainCredentials(credentialMap)).accessToken.data;
         finishedCallback();
       }.call();
     });

@@ -19,6 +19,7 @@ class User {
   rsa.RSAPrivateKey? ourPrivate;
   late Encrypter encrypter;
   late UserReceiver receiver;
+  bool showOnlineStatus = true;
   User({required this.uuid}) {
     receiver = UserReceiver(this);
   }
@@ -65,41 +66,29 @@ class User {
       ELog.e("Cannot send $uuid a notification! No token!");
       return;
     }
-    // OfflineHandler().sendNotification(OfflineHandler.bodyBuilder(
-    //     targetToken: (await getPushNotificationCode())!,
-    //     data: {
-    //       'message-type': 'new_message',
-    //       'time_of': DateTime.now().millisecondsSinceEpoch.toString()
-    //     }));
+    OfflineHandler().sendNotification(OfflineHandler.bodyBuilder(
+        targetToken: (await getPushNotificationCode())!, data: {'message-type': 'new_message', 'time_of': DateTime.now().millisecondsSinceEpoch.toString()}));
   }
 
   void _createEncrypter() {
     encrypter = EncryptionUtil.createEncrypter(userPublic, ourPrivate);
   }
 
-  String decryptParts(List<String> parts) {
-    return EncryptionUtil.decryptParts(parts, encrypter);
+  Future<String> decryptParts(List<String> parts) async {
+    return await EncryptionUtil.decryptParts(parts, encrypter);
   }
 
-  String decryptMessage(String message) {
-    return EncryptionUtil.decryptMessage(message, encrypter);
+  Future<List<String>> getEncryptedPieces(String message) async {
+    return await EncryptionUtil.toEncryptedPieces(message, encrypter);
   }
 
-  String encrypt(String message) {
-    return EncryptionUtil.encrypt(message, encrypter);
-  }
-
-  List<String> getEncryptedPieces(String message) {
-    return EncryptionUtil.toEncryptedPieces(message, encrypter);
-  }
-
-  void sendMessage(String message) {
-    List<String> encryptedPieces = getEncryptedPieces(message);
+  Future<void> sendMessage(String message) async {
+    List<String> encryptedPieces = await getEncryptedPieces(message);
     activeSocket!.add(jsonEncode({MagicNumber.MESSAGE_COMPILATION: encryptedPieces}));
   }
 
   Future<void> addToCache(String message) async {
-    List<String> encryptedPieces = getEncryptedPieces(message);
+    List<String> encryptedPieces = await getEncryptedPieces(message);
     String encryptedMessage = jsonEncode({MagicNumber.MESSAGE_COMPILATION: encryptedPieces});
     String? dataCol = await KeyHandler().getUserDataColumn(uuid);
     if (dataCol == null) {
@@ -141,6 +130,13 @@ class User {
   }
 
   bool isOnline() {
+    if (activeSocket == null) {
+      return false;
+    }
+    return activeSocket!.closeCode == null && showOnlineStatus;
+  }
+
+  bool hasActiveBackgroundConnection() {
     if (activeSocket == null) {
       return false;
     }

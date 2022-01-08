@@ -6,6 +6,7 @@ class ClientComponent {
   static final String TYPING_INDICATOR = 'typ';
 
   static final String FILE_URL = 'irul';
+  static final String STATUS_UPDATE = 'stat';
 
   static final String NAME_UPDATE = "nu";
   static final String MESSAGE_CONTENT = "mc";

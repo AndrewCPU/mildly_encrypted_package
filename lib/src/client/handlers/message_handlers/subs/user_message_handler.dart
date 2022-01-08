@@ -15,6 +15,7 @@ import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/su
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/name_update_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/profile_picture_update_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/rand_int_event.dart';
+import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/status_update_event.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientGroupChat.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
@@ -52,7 +53,7 @@ class UserMessageHandler implements MessageHandler {
       return;
     }
     Map map = jsonDecode(message);
-    String decryptedMessage = user.decryptFromUser((map[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>());
+    String decryptedMessage = await user.decryptFromUser((map[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>());
 
     ClientUser? fromUser = (await (await ClientManagement.getInstance()).getUser(from));
 
@@ -69,6 +70,7 @@ class UserMessageHandler implements MessageHandler {
       GroupNameUpdateEvent(),
       TypingHandler(),
       KeyExchangeCompleteEvent(),
+      StatusUpdateEvent(),
     ];
 
     for (MessageHandler handler in handlers) {

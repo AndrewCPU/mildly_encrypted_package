@@ -43,7 +43,12 @@ class ChatMessageEvent implements MessageHandler {
 
     if (messageMetaData.containsKey(ClientComponent.FILE_URL)) {
       String url = messageMetaData[ClientComponent.FILE_URL];
-      String downloadedPath = await FileDownload.downloadFile(url, GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from));
+      String downloadedPath =
+          await FileDownload.downloadFile(url, GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from), downloadProgress: (val) {
+        // multSource.fileDownloadProgress[url] = val;
+            multSource.updateFileDownloadProgress(url, val);
+      });
+      // multSource.fileDownloadProgress.remove(url);
       print(downloadedPath);
       String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, this.from, await multSource.getMultPW(),
           GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from) + Platform.pathSeparator);
@@ -73,6 +78,12 @@ class ChatMessageEvent implements MessageHandler {
           await ClientKeyManager().updateContact(EncryptedClient.getInstance()!.serverUrl, keyID ?? from, data: data);
         }
       }
+    }
+
+    if (EncryptedClient.getInstance() != null && EncryptedClient.getInstance()!.notificationCallback != null) {
+      ClientUser fromUser = (await (await ClientManagement.getInstance()).getUser(from))!;
+      EncryptedClient.getInstance()!.notificationCallback!(fromUser.profilePicturePath, fromUser.username, fromUser.uuid,
+          messageMetaData.containsKey(ClientComponent.FILE_URL) ? 'Sent a file' : messageContent);
     }
 
     await (await (await ClientManagement.getInstance()).getFromUUID(keyID ?? from))?.markAsDelivered(messageUuid);

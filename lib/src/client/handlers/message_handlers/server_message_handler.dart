@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/key_exchange_handler.dart';
+import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/online_status_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/user_message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ServerObject.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
@@ -18,9 +19,10 @@ class ServerMessageHandler {
   ServerMessageHandler(this.serverObject) {
     handlers.add(KeyExchangeHandler(serverObject));
     handlers.add(UserMessageHandler(serverObject));
+    handlers.add(OnlineStatusHandler());
   }
 
-  void handle(EncryptedClient client, String data) {
+  void handle(EncryptedClient client, String data) async{
     print(data);
     if (!JSONValidate.isValidJSON(data, requiredKeys: [MagicNumber.MESSAGE_COMPILATION])) {
       ELog.e("Server message handler was passed invalid data.");
@@ -28,9 +30,9 @@ class ServerMessageHandler {
     }
 
     Map encryptedMap = jsonDecode(data);
-    String decodedComp = EncryptionUtil.decryptParts((encryptedMap[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>(), serverObject.encrypter);
+    String decodedComp = await EncryptionUtil.decryptParts((encryptedMap[MagicNumber.MESSAGE_COMPILATION] as List).cast<String>(), serverObject.encrypter);
     Map map = jsonDecode(decodedComp);
-    String from = map[MagicNumber.FROM_USER];
+    String from = map[MagicNumber.FROM_USER] ?? 'server';
     String? keyID;
     if (map.containsKey(MagicNumber.KEY_ID)) {
       keyID = map[MagicNumber.KEY_ID];

@@ -24,6 +24,7 @@ dependencies:
   aes_crypt_null_safe: ^2.0.2
   mime: ^1.0.1
   http_parser: ^4.0.0
+  dio: ^4.0.4
   quick_load_thumbnail:
     git:
       url: git://github.com/AndrewCPU/quick_load_thumbnail.git

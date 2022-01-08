@@ -44,9 +44,13 @@ class ServerObject {
   }
 
   Future<void> sendMessage(String message) async {
-    List<String> encryptedBlock = EncryptionUtil.toEncryptedPieces(message, encrypter);
+    List<String> encryptedBlock = await EncryptionUtil.toEncryptedPieces(message, encrypter);
     Map m = {MagicNumber.MESSAGE_COMPILATION: encryptedBlock};
     client.getChannel()!.sink.add(jsonEncode(m));
+  }
+
+  Future<void> updateOnlineStatus(String targetUUID) async {
+    await sendMessage(jsonEncode({MagicNumber.ONLINE: targetUUID}));
   }
 
   Future<void> exchangeKeys(String toUser) async {

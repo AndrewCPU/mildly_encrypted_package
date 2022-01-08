@@ -1,5 +1,6 @@
 library mildly_encrypted_package;
 
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
 
@@ -27,7 +28,10 @@ class EncryptedClient {
   String pushToken;
 
   void Function(EncryptedClient) onConnect;
+  void Function(String, String, String, String)? notificationCallback;
   void Function() receiveSpecialData;
+
+  List<String> offlineQueue = [];
 
   IOWebSocketChannel? _channel;
   WebSocketDataHandler? _handler;
@@ -36,14 +40,24 @@ class EncryptedClient {
 
   bool _authenticated = false;
   bool reset;
+
+  Duration? timeout;
+  int lastReceived = 0;
+
   EncryptedClient(
       {required this.serverUrl,
       required this.pushToken,
       required this.rootDirectory,
       required this.onConnect,
       this.reset = false,
+      this.timeout,
+      this.notificationCallback,
       required this.receiveSpecialData}) {
     GetPath.initialize(rootDirectory);
+    if (_instance != null) {
+      _instance!.getChannel()?.sink.close(1234);
+      backgroundTimer?.cancel();
+    }
     _instance = this;
   }
 
@@ -53,6 +67,7 @@ class EncryptedClient {
 
   String _myProfilePicturePath = "";
   String _myUsername = "";
+  String _myStatus = '';
 
   bool isConnected() {
     if (getChannel() == null) {
@@ -67,60 +82,35 @@ class EncryptedClient {
     return true;
   }
 
-  Future<void> disconnect() async {
-    if (isConnected()) {
-      _authenticated = false;
-      getChannel()?.innerWebSocket?.close(9876);
-      ELog.i("Disconnecting from server.");
-    }
-  }
-
-  Future<void> reconnect() async {
-    if (!isConnected()) {
-      ELog.i("Reconnecting to server.");
-      await connect();
-    }
-  }
-
-  Future<void> updateMyUsername(String username) async {
-    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
-    await _save.setString('username', username);
-    _myUsername = username;
-    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
-    for (ClientUser chat in allChats) {
-      chat.sendUsernameUpdate(username);
-    }
-    //todo send packet out
-  }
-
-  Future<void> updateMyProfilePath(String path) async {
-    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
-    await _save.setString('profile_path', path);
-    _myProfilePicturePath = path;
-    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
-    for (ClientUser chat in allChats) {
-      chat.sendProfilePictureUpdate(path);
-    }
-  }
-
-  String getMyProfilePicturePath() {
-    return _myProfilePicturePath;
-  }
-
-  String getMyUsername() {
-    return _myUsername;
-  }
-
-  void finishedAuthentication() {
+  Timer? backgroundTimer;
+  void finishedAuthentication() async {
     () async {
-      await MessageStorage().init();
-      (await ClientManagement.getInstance());
+      await getServerObject();
       _authenticated = true;
       onConnect(this);
+      lastReceived = DateTime.now().millisecondsSinceEpoch;
+      if (timeout != null) {
+        backgroundTimer = Timer.periodic(timeout!, (timer) {
+          if (DateTime.now().millisecondsSinceEpoch - timeout!.inMilliseconds > lastReceived) {
+            timer.cancel();
+            disconnect();
+          }
+        });
+      }
+      for (String s in offlineQueue) {
+        (await getServerObject()).sendMessage(s);
+      }
+      offlineQueue.clear();
     }.call();
   }
 
+  ServerObject? _serverObject;
+
   Future<void> connect() async {
+    _authenticated = false;
+    if (_channel != null && _channel!.closeCode == null) {
+      _channel?.sink.close(9856, 'Reconnect');
+    }
     if (reset) {
       await (await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json")).clear();
       await ClientKeyManager().reset();
@@ -128,13 +118,18 @@ class EncryptedClient {
     SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
     _myProfilePicturePath = await _save.getString('profile_path') ?? 'null';
     _myUsername = await _save.getString('username') ?? 'Username';
+    _myStatus = await _save.getString('status') ?? '';
+    await ClientKeyManager().init();
+    await MessageStorage().init();
+    (await ClientManagement.getInstance());
     try {
-      _channel = IOWebSocketChannel(await WebSocket.connect("ws://$serverUrl:1234"));
+      _channel = IOWebSocketChannel(await WebSocket.connect("wss://$serverUrl:4320"));
     } catch (e, s) {
+      print(e);
       ELog.i("Unable to connect WebSocket");
       ELog.e(e);
+      print(s);
       _authenticated = false;
-      // ELog.e(s);
       return;
     }
 
@@ -150,8 +145,67 @@ class EncryptedClient {
     _channel!.innerWebSocket?.pingInterval = const Duration(seconds: 5);
   }
 
+  Future<void> disconnect() async {
+    if (isConnected()) {
+      _authenticated = false;
+      getChannel()?.innerWebSocket?.close(9876);
+      ELog.i("Disconnecting from server.");
+    }
+  }
+
+  Future<void> reconnect() async {
+    if (!isConnected()) {
+      _authenticated = false;
+      ELog.i("Reconnecting to server.");
+      await connect();
+    }
+  }
+
+  Future<void> updateMyUsername(String username) async {
+    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
+    await _save.setString('username', username);
+    _myUsername = username;
+    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
+    for (ClientUser chat in allChats) {
+      chat.sendUsernameUpdate(username);
+    }
+  }
+
+  Future<void> updateMyProfilePath(String path) async {
+    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
+    await _save.setString('profile_path', path);
+    _myProfilePicturePath = path;
+    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
+    for (ClientUser chat in allChats) {
+      chat.sendProfilePictureUpdate(path);
+    }
+  }
+
+  Future<void> updateMyStatus(String newStatus) async {
+    SaveFile _save = await SaveFile.getInstance(path: GetPath.getInstance().path + "/data.json");
+    await _save.setString('status', newStatus);
+    _myStatus = newStatus;
+    List<ClientUser> allChats = (await ClientManagement.getInstance()).getAllUsers();
+    for (ClientUser chat in allChats) {
+      chat.sendStatusUpdate(newStatus);
+    }
+  }
+
+  String getMyProfilePicturePath() {
+    return _myProfilePicturePath;
+  }
+
+  String getMyUsername() {
+    return _myUsername;
+  }
+
+  String getMyStatus() {
+    return _myStatus;
+  }
+
   Future<ServerObject> getServerObject() async {
-    return await ServerObject.getInstance(this);
+    _serverObject ??= await ServerObject.getInstance(this);
+    return _serverObject!;
   }
 
   ClientKeyManager get keyManager {
