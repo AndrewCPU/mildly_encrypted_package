@@ -114,11 +114,11 @@ class ClientManagement {
     return await getUser(uuid);
   }
 
-  Future<void> addUserContact(String uuid) async {
-    EncryptedClient client = EncryptedClient.getInstance()!;
-    ServerObject object = await ServerObject.getInstance(client);
-    await object.exchangeKeys(uuid);
-  }
+  // Future<void> addUserContact(String uuid) async {
+  //   EncryptedClient client = EncryptedClient.getInstance()!;
+  //   ServerObject object = await ServerObject.getInstance(client);
+  //   // await object.exchangeKeys(uuid);
+  // }
 
   Future<void> deleteGroupChat(ClientGroupChat chat) async {
     _groupChats.remove(chat);

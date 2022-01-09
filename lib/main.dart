@@ -27,7 +27,7 @@ void main(args) async {
             //   ClientGroupChat group = (await ((await ClientManagement.getInstance()).getGroupChat('32345548-6a23-4824-9c31-180feade5557')))!;
             //   group.sendChatMessage('yoyoyo');
             // });
-            (await client.getServerObject()).exchangeKeys('78615eec-8763-436a-b781-94df0d0b533a');
+            // (await client.getServerObject()).exchangeKeys('78615eec-8763-436a-b781-94df0d0b533a');
           },
           receiveSpecialData: () {});
       await client.connect();

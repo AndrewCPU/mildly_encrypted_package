@@ -22,9 +22,9 @@ class ServerMessageHandler {
     handlers.add(OnlineStatusHandler());
   }
 
-  void handle(EncryptedClient client, String data) async{
-    print(data);
+  void handle(EncryptedClient client, String data) async {
     if (!JSONValidate.isValidJSON(data, requiredKeys: [MagicNumber.MESSAGE_COMPILATION])) {
+      print(data);
       ELog.e("Server message handler was passed invalid data.");
       return;
     }

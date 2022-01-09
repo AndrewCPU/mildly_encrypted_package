@@ -17,6 +17,8 @@ class MagicNumber {
   static final String ACTIVE = 'a';
   static final String CLIENT_FINISHED_AUTHENTICATION = 'cfa';
 
+  static final String ENCRYPTED_KEY_EXCHANGE = '';
+
   static final String ONLINE = 'o';
 
   static final String SERVER_ADDRESS = "dialchat.app";

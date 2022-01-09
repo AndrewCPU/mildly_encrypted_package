@@ -23,6 +23,7 @@ class KeyExchangeCompleteEvent implements MessageHandler {
     ClientUser clientUser = ((await (await ClientManagement.getInstance()).getUser(from))!);
     await clientUser.sendProfilePictureUpdate(EncryptedClient.getInstance()!.getMyProfilePicturePath());
     await clientUser.sendUsernameUpdate(EncryptedClient.getInstance()!.getMyUsername());
+    await clientUser.sendStatusUpdate(EncryptedClient.getInstance()!.getMyStatus());
     CoreEventRegistry().notify(CoreEventType.KEY_EXCHANGE_COMPLETE, data: from);
   }
 }

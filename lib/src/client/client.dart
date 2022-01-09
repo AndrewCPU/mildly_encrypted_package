@@ -9,11 +9,14 @@ import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart
 import 'package:mildly_encrypted_package/src/client/data/message_storage.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
+import 'package:mildly_encrypted_package/src/client/objs/EncryptedKeyExchanger.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ServerObject.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
+import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
 import 'package:mildly_encrypted_package/src/utils/save_file.dart';
 import 'package:web_socket_channel/io.dart';
-
+import 'package:pointycastle/asymmetric/api.dart' as rsa;
+import 'package:pointycastle/api.dart' as asym;
 import '../logging/ELog.dart';
 import 'handlers/web_socket_message_handler.dart';
 
@@ -106,6 +109,9 @@ class EncryptedClient {
 
   ServerObject? _serverObject;
 
+  String qrPublic = '';
+  String qrPrivate = '';
+
   Future<void> connect() async {
     _authenticated = false;
     if (_channel != null && _channel!.closeCode == null) {
@@ -119,6 +125,17 @@ class EncryptedClient {
     _myProfilePicturePath = await _save.getString('profile_path') ?? 'null';
     _myUsername = await _save.getString('username') ?? 'Username';
     _myStatus = await _save.getString('status') ?? '';
+
+    if (!_save.containsKey('qrpu')) {
+      var pair = CryptoUtils.generateRSAKeyPair();
+      //-----BEGIN PUBLIC KEY-----
+      //-----END PUBLIC KEY-----
+      await _save.setString('qrpu', CryptoUtils.encodeRSAPublicKeyToPem(pair.publicKey as rsa.RSAPublicKey));
+      await _save.setString('qrpr', CryptoUtils.encodeRSAPrivateKeyToPem(pair.privateKey as rsa.RSAPrivateKey));
+    }
+    qrPublic = (await _save.getString('qrpu'))!;
+    qrPrivate = (await _save.getString('qrpr'))!;
+
     await ClientKeyManager().init();
     await MessageStorage().init();
     (await ClientManagement.getInstance());
@@ -159,6 +176,10 @@ class EncryptedClient {
       ELog.i("Reconnecting to server.");
       await connect();
     }
+  }
+
+  Future<void> encryptedExchange(String uuid, String key) async {
+    await EncryptedKeyExchanger.exchangeKey(uuid, key);
   }
 
   Future<void> updateMyUsername(String username) async {

@@ -20,16 +20,19 @@ class OnlineStatusHandler implements MessageHandler {
   @override
   void handle(String message, String from, {String? keyID}) async {
     Map json = jsonDecode(message);
-    String userIDInRef = json[MagicNumber.ONLINE];
-    bool isOnline = json[MagicNumber.ACTIVE];
-    ClientUser? user = await (await ClientManagement.getInstance()).getUser(userIDInRef);
-    if (user == null) {
-      return;
-    }
-    bool originalVal = user.online;
-    if (originalVal != isOnline) {
-      user.online = isOnline;
-      CoreEventRegistry().notify(CoreEventType.NAME_UPDATE, data: user.uuid);
+    // String userIDInRef = json[MagicNumber.ONLINE];
+    Map m = json[MagicNumber.ACTIVE];
+    for (String key in m.keys) {
+      bool isOnline = m[key];
+      ClientUser? user = await (await ClientManagement.getInstance()).getUser(key);
+      if (user == null) {
+        return;
+      }
+      bool originalVal = user.online;
+      if (originalVal != isOnline) {
+        user.online = isOnline;
+        CoreEventRegistry().notify(CoreEventType.NAME_UPDATE, data: user.uuid);
+      }
     }
   }
 }

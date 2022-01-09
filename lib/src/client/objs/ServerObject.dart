@@ -49,11 +49,11 @@ class ServerObject {
     client.getChannel()!.sink.add(jsonEncode(m));
   }
 
-  Future<void> updateOnlineStatus(String targetUUID) async {
+  Future<void> updateOnlineStatus(List<String> targetUUID) async {
     await sendMessage(jsonEncode({MagicNumber.ONLINE: targetUUID}));
   }
 
-  Future<void> exchangeKeys(String toUser) async {
+  Future<void> _exchangeKeys(String toUser, String keyPublicKey) async {
     String public;
     String private;
     if (await ClientKeyManager().doesContactExist(client.serverUrl, toUser)) {

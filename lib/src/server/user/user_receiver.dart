@@ -46,17 +46,42 @@ class UserReceiver {
       Map intraOutMap = {MagicNumber.FROM_USER: user.uuid, MagicNumber.PUBLIC_KEY_DELIM: json[MagicNumber.PUBLIC_KEY_DELIM]};
       String intraOut = jsonEncode(intraOutMap);
       targetUser.receiver.intraserverMessage(intraOut);
-      ELog.i("Handling key exchange.");
+      ELog.i("Handling legacy key exchange.");
       return;
     }
-    if (JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.ONLINE])) {
-      String query = json[MagicNumber.ONLINE];
-      User? user = UserHandler().getUser(uuid: query);
-      bool online = false;
-      if (user != null) {
-        online = user.isOnline();
+
+    if (JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.ENCRYPTED_KEY_EXCHANGE, MagicNumber.TO_USER])) {
+      List toUser = json[MagicNumber.TO_USER];
+      List data = json[MagicNumber.ENCRYPTED_KEY_EXCHANGE];
+
+      String targetUser = toUser[0].toString();
+      Map newOut = {MagicNumber.FROM_USER: user.uuid, MagicNumber.ENCRYPTED_KEY_EXCHANGE: data};
+      String dataOut = jsonEncode(newOut);
+      User? targetUserObj = await UserHandler().getOrLoadUser(targetUser);
+      if (targetUserObj == null) {
+        ELog.e("${user.uuid} tried to send a key exchange to an invalid user. $targetUser");
+        return;
       }
-      await this.user.sendMessage(jsonEncode({MagicNumber.ONLINE: query, MagicNumber.ACTIVE: online}));
+      ELog.i("Performing encrypted key exchange.");
+      targetUserObj.receiver.intraserverMessage(dataOut);
+      return;
+    }
+
+    if (JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.ONLINE])) {
+      if (json[MagicNumber.ONLINE] is! List) {
+        return;
+      }
+      List<String> all = ((json[MagicNumber.ONLINE] as List).cast<String>());
+      Map response = {};
+      for (String query in all) {
+        User? user = UserHandler().getUser(uuid: query);
+        bool online = false;
+        if (user != null) {
+          online = user.isOnline();
+        }
+        response[query] = online;
+      }
+      await user.sendMessage(jsonEncode({MagicNumber.ONLINE: 'r', MagicNumber.ACTIVE: response}));
       return;
     }
 
