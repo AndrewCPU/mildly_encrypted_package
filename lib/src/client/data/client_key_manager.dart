@@ -1,10 +1,8 @@
 import 'dart:convert';
 
 import 'package:mildly_encrypted_package/src/client/data/message_storage.dart';
-import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
 import 'package:path/path.dart';
-// import 'package:sqflite/sqflite.dart';
 
 import '../../sql_wrapper/db/SDatabase.dart';
 import '../../sql_wrapper/sql_wrapper.dart';

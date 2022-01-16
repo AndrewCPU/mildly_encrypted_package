@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:encrypt/encrypt.dart';
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
+import 'package:mildly_encrypted_package/src/client/client.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/CoreEventType.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/core_event_registry.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/notification_registry.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/client/data/message_storage.dart';
@@ -11,6 +13,7 @@ import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 import 'package:mildly_encrypted_package/src/client/objs/encryption_pack.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
+import 'package:mildly_encrypted_package/src/utils/ClientEncryptionUtil.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
 import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
 import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
@@ -122,7 +125,7 @@ class ClientGroupChat extends ClientUser {
 
   Future<void> sendGroupImageUpdate(String newGroupImageLocalPath) async {
     Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid + Platform.pathSeparator);
-    String encryptFile = await EncryptionUtil.encryptFileToPath(newGroupImageLocalPath, this, await getMultPW(), directory.path);
+    String encryptFile = await ClientEncryptionUtil.encryptFileToPath(newGroupImageLocalPath, this, await getMultPW(), directory.path);
     String? uploadedPath = await FileDownload.uploadFile(encryptFile);
     if (uploadedPath == null) {
       ELog.e("Something went wrong with a file upload! to $uuid");

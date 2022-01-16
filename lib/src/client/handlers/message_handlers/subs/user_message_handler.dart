@@ -9,6 +9,7 @@ import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/su
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_events/read_status_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_events/typing_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_message_event.dart';
+import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/expiration_time_update_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/full_key_exchange_complete_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/group_chat_invite_event.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/message_update_event.dart';
@@ -71,6 +72,7 @@ class UserMessageHandler implements MessageHandler {
       TypingHandler(),
       KeyExchangeCompleteEvent(),
       StatusUpdateEvent(),
+      ExpirationTimeUpdateEvent()
     ];
 
     for (MessageHandler handler in handlers) {

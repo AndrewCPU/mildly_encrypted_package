@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:mildly_encrypted_package/src/server/admin/admin.dart';
 import 'package:mildly_encrypted_package/src/server/data/file_upload.dart';
 
 import '../logging/ELog.dart';
@@ -15,6 +16,7 @@ class EncryptionServer {
   Future<void> startServer({bool legacyMode = false}) async {
     await KeyHandler().init();
     FileUploadServer();
+    Admin();
     if (legacyMode) {
       HttpServer server = await HttpServer.bind('0.0.0.0', 1234);
       server.transform(WebSocketTransformer()).listen(onWebSocketData, onError: (e) {

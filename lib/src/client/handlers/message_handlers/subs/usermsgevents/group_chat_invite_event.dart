@@ -1,7 +1,8 @@
 import 'dart:convert';
 
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/CoreEventType.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/core_event_registry.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientGroupChat.dart';
@@ -9,9 +10,10 @@ import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
 import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
 import 'package:mildly_encrypted_package/src/utils/json_validator.dart';
-import 'package:uuid/uuid.dart';
 import 'package:pointycastle/asymmetric/api.dart' as rsa;
 import 'package:pointycastle/api.dart' as asym;
+
+import '../../../../client.dart';
 
 class GroupChatInviteEvent implements MessageHandler {
   @override

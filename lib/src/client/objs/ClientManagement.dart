@@ -1,8 +1,8 @@
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientGroupChat.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ServerObject.dart';
 
+import '../client.dart';
 import 'ClientUser.dart';
 
 class ClientManagement {

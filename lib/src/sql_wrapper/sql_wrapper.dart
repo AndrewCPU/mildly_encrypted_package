@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'db/SDatabase.dart';
 import 'sql_io.dart' if (dart.library.ui) 'sql_ui.dart';
 

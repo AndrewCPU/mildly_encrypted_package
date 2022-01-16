@@ -15,6 +15,19 @@ class UserHandler {
 
   final List<User> _currentUsers = [];
 
+  int getAmountOfLoadedUsers(){
+    return _currentUsers.length;
+  }
+
+  int getAmountOfOnlineUsers() {
+    return _currentUsers.where((element) => element.isOnline()).toList().length;
+  }
+
+  int getAmountOfConnectedUsers() {
+    return _currentUsers.where((element) => element.hasActiveBackgroundConnection()).toList().length;
+  }
+
+
   User? getUser({String? uuid, WebSocket? socket}) {
     if (uuid != null) {
       return _currentUsers.firstWhereOrNull((e) => e.uuid == uuid);

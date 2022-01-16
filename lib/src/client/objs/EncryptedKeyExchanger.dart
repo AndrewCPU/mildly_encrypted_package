@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:encrypt/encrypt.dart';
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
 import 'package:mildly_encrypted_package/src/utils/encryption_util.dart';
 import 'package:mildly_encrypted_package/src/utils/magic_nums.dart';
 
+import '../client.dart';
 import 'ServerObject.dart';
 
 import 'package:pointycastle/asymmetric/api.dart' as rsa;

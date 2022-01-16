@@ -3,17 +3,17 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:encrypt/encrypt.dart';
+import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/notification_registry.dart';
 import 'package:mildly_encrypted_package/src/client/data/message_storage.dart';
-import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_events/reaction_handler.dart';
-import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/usermsgevents/chat_events/read_status_handler.dart';
-import 'package:mildly_encrypted_package/src/client/objs/encryption_pack.dart';
 import 'package:mildly_encrypted_package/src/client/objs/message_update_builder.dart';
+import 'package:mildly_encrypted_package/src/utils/ClientEncryptionUtil.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
 import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
 import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
 import 'package:mildly_encrypted_package/src/utils/save_file.dart';
+import 'package:mildly_encrypted_package/src/utils/string_util.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../logging/ELog.dart';
@@ -22,7 +22,6 @@ import '../../utils/magic_nums.dart';
 import '../client.dart';
 import '../data/client_key_manager.dart';
 import 'package:pointycastle/asymmetric/api.dart' as rsa;
-import 'package:pointycastle/api.dart' as asym;
 
 import 'ServerObject.dart';
 
@@ -66,7 +65,23 @@ class ClientUser {
   rsa.RSAPrivateKey? privateKey;
   rsa.RSAPublicKey? remoteKey;
   late Encrypter encrypter;
-  bool online = false;
+  bool _online = false;
+
+  bool get online {
+    return _online;
+  }
+
+  set online(bool b) {
+    _online = b;
+    () async {
+      Map? data = await ClientKeyManager().getUserData(client.serverUrl, uuid);
+      if (data == null) {
+        return;
+      }
+      data['online'] = b;
+      await ClientKeyManager().updateContact(client.serverUrl, uuid, data: data);
+    }.call();
+  }
 
   void _createEncrypter() {
     encrypter = EncryptionUtil.createEncrypter(remoteKey, privateKey);
@@ -74,6 +89,46 @@ class ClientUser {
 
   Future<void> deleteChat() async {
     await ClientKeyManager().deleteContact(EncryptedClient.getInstance()!.serverUrl, uuid);
+  }
+
+  Future<void> setChatExpirationTime(int timeInMs, {bool sendUpdate = false}) async {
+    Map? data = await ClientKeyManager().getUserData(client.serverUrl, uuid);
+    if (data == null) {
+      ELog.e('Cannot update expiration time. Client data is unavailable for $uuid.');
+      return;
+    }
+    data['expiration'] = timeInMs;
+    ClientKeyManager().updateContact(client.serverUrl, uuid, data: data);
+    if (sendUpdate) {
+      await sendDataPacket(jsonEncode({ClientComponent.EXPIRATION_UPDATE_MS: timeInMs}));
+    }
+    var v4 = Uuid().v4();
+
+    await MessageStorage().insertMessage(EncryptedClient.getInstance()!.serverUrl, uuid,
+        messageUuid: v4,
+        senderUuid: 'notification',
+        messageContent: "The chat expiration has been set to ${StringUtils.timeIncrement(timeInMs)}",
+        messageData: {'notification': true},
+        timeMs: DateTime.now().millisecondsSinceEpoch);
+
+    if (this is ClientGroupChat) {
+      UpdateNotificationRegistry.getInstance().newMessage((await (await ClientManagement.getInstance()).getGroupChat(uuid))!, v4);
+    } else {
+      UpdateNotificationRegistry.getInstance().newMessage((await (await ClientManagement.getInstance()).getUser(uuid))!, v4);
+    }
+  }
+
+  Future<int> getExpirationTime() async {
+    Map? data = await ClientKeyManager().getUserData(client.serverUrl, uuid);
+    if (data == null) {
+      ELog.e('Cannot get expiration time. Client data is unavailable for $uuid. Setting to unexpiring.');
+      return -1; // -1 = never
+    }
+    if (data.containsKey('expiration')) {
+      return data['expiration'];
+    } else {
+      return -1; // -1 = never.
+    }
   }
 
   Future<String> sendChatMessage(String messageContent, {Map? specialData, Map? localDifference}) async {
@@ -150,7 +205,7 @@ class ClientUser {
 
   Future<void> sendFile(String path) async {
     Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid);
-    String encryptFile = await EncryptionUtil.encryptFileToPath(path, this, await getMultPW(), directory.path);
+    String encryptFile = await ClientEncryptionUtil.encryptFileToPath(path, this, await getMultPW(), directory.path);
     String? uploadedPath = await FileDownload.uploadFile(encryptFile, uploadProgress: (val) {
       updateFileUploadProgress(path, val);
     });
@@ -231,6 +286,9 @@ class ClientUser {
     }
     reads[uuidRead] = state;
     currentMessageData['read_status'] = reads;
+    if (await getExpirationTime() != -1 && reads[uuidRead] == ClientComponent.READ_STATUS_READ) {
+      currentMessageData['expires'] = DateTime.now().millisecondsSinceEpoch + await getExpirationTime();
+    }
     await MessageStorage().updateMessage(client.serverUrl, uuid, messageID, currentMessageData);
   }
 
@@ -277,7 +335,6 @@ class ClientUser {
         .withValue(ClientComponent.READ_STATUS_READ)
         .buildMessage();
     await acceptReadReceiptChange(client.uuid!, messageID, ClientComponent.READ_STATUS_READ);
-
     // await ReadStatusHandler().handle(jsonEncode(buildData), EncryptedClient.getInstance()!.uuid!, keyID: uuid);
     await sendMessageUpdate(buildData);
   }
@@ -318,7 +375,7 @@ class ClientUser {
 
   Future<void> sendProfilePictureUpdate(String profilePictureLocalPath) async {
     Directory directory = Directory(GetPath.getInstance().path + Platform.pathSeparator + uuid + Platform.pathSeparator);
-    String encryptFile = await EncryptionUtil.encryptFileToPath(profilePictureLocalPath, this, await getMultPW(), directory.path);
+    String encryptFile = await ClientEncryptionUtil.encryptFileToPath(profilePictureLocalPath, this, await getMultPW(), directory.path);
     String? uploadedPath = await FileDownload.uploadFile(encryptFile);
     if (uploadedPath == null) {
       ELog.e("Something went wrong with a file upload! to $uuid");
@@ -412,6 +469,10 @@ class ClientUser {
       status = data['status'];
     } else {
       status = '';
+    }
+
+    if (data.containsKey('online')) {
+      _online = data['online'];
     }
     remoteKey = await ClientKeyManager().getRSARemotePublicKey(client.serverUrl, uuid);
     privateKey = await ClientKeyManager().getRSAPrivateKey(client.serverUrl, uuid);

@@ -1,11 +1,9 @@
 import 'dart:convert';
 
 import 'package:encrypt/encrypt.dart';
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
-import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 import 'package:mildly_encrypted_package/src/client/objs/EncryptedKeyExchanger.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ServerObject.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
@@ -15,7 +13,8 @@ import 'package:mildly_encrypted_package/src/utils/json_validator.dart';
 import 'package:mildly_encrypted_package/src/utils/magic_nums.dart';
 
 import 'package:pointycastle/asymmetric/api.dart' as rsa;
-import 'package:pointycastle/api.dart' as asym;
+
+import '../../../client.dart';
 
 class KeyExchangeHandler implements MessageHandler {
   ServerObject serverObject;

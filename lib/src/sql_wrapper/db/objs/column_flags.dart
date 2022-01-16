@@ -1,1 +1,0 @@
-enum ColumnFlag { primary, autoincrement }

@@ -86,7 +86,7 @@ class UserReceiver {
     }
 
     if (!JSONValidate.isValidJSON(decodedJson, requiredKeys: [MagicNumber.TO_USER, MagicNumber.MESSAGE_COMPILATION])) {
-      ELog.e("Encrypted data is invalid. ${user.uuid}");
+      ELog.e("Encrypted data is invalid. ${user.uuid} $decodedJson");
       return;
     }
 

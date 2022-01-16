@@ -1,20 +1,49 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
 import 'package:mildly_encrypted_package/src/sql_wrapper/db/SDatabase.dart';
 import 'package:mildly_encrypted_package/src/sql_wrapper/sql_wrapper.dart';
+import 'package:mildly_encrypted_package/src/utils/json_validator.dart';
 import 'package:path/path.dart';
 
 class MessageStorage {
   static final MessageStorage _instance = MessageStorage._internal();
-  MessageStorage._internal();
+  Timer? expirationTimer;
+  MessageStorage._internal() {
+    expirationTimer = Timer.periodic(Duration(seconds: 5), (timer) async {
+      int now = DateTime.now().millisecondsSinceEpoch;
+      Map<ClientUser, bool> needsRebuild = {};
+      ClientManagement management = await ClientManagement.getInstance();
+      List<ClientUser> everyone = management.getAllUsers();
+      for (ClientUser user in everyone) {
+        if (expirationTimes.containsKey(user)) {
+          for (int time in expirationTimes[user]!) {
+            if (time < now) {
+              needsRebuild[user] = true;
+            }
+          }
+        }
+      }
+
+      for (ClientUser user in needsRebuild.keys) {
+        if (needsRebuild[user]!) {
+          UpdateNotificationRegistry.getInstance().messageUpdate(user, '');
+        }
+      }
+    });
+  }
 
   SDatabase? database;
 
   factory MessageStorage() {
     return _instance;
   }
+
+  Map<ClientUser, List<int>> expirationTimes = {};
 
   Future<void> init() async {
     database ??= await SQLFactory().openDatabase(
@@ -93,13 +122,36 @@ class MessageStorage {
     }
     var results = await database!.query(getTableName(serverIP, chatID), orderBy: 'message_time ASC');
     List<T> response = [];
+    List<String> messageUuidsDelete = [];
+    ClientUser userObject = (await ((await ClientManagement.getInstance()).getFromUUID(chatID)))!;
+    expirationTimes[userObject] = [];
     for (Map result in results) {
+      if (JSONValidate.isValidJSON(result['message_data'], requiredKeys: ['expires'])) {
+        int expiresTime = jsonDecode(result['message_data'])['expires'];
+        if (DateTime.now().millisecondsSinceEpoch > expiresTime) {
+          messageUuidsDelete.add(result['message_uuid']);
+          continue;
+        } else {
+          expirationTimes[userObject] ??= [];
+          expirationTimes[userObject]!.add(expiresTime);
+        }
+      }
+
+      ClientUser? sender;
+      if (result['sender_uuid'] == 'notification') {
+        sender = null;
+      } else {
+        sender = ((await (await ClientManagement.getInstance()).getUser(result['sender_uuid'])));
+      }
       response.add(builder(
-          sender: ((await (await ClientManagement.getInstance()).getUser(result['sender_uuid']))),
+          sender: sender,
           messageUuid: result['message_uuid'],
           time: result['message_time'],
           messageContent: result['message_content'],
           data: jsonDecode(result['message_data'])));
+    }
+    for (String messageUuid in messageUuidsDelete) {
+      await deleteMessage(serverIP, chatID, messageUuid);
     }
     return response;
   }

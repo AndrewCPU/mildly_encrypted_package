@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/CoreEventType.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/core_event_registry.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
+import 'package:mildly_encrypted_package/src/utils/ClientEncryptionUtil.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
 import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
 import 'package:mildly_encrypted_package/src/utils/encryption_util.dart';
@@ -34,7 +37,7 @@ class ProfilePictureUpdateEvent implements MessageHandler {
       multSource = (await (await ClientManagement.getInstance()).getUser(from))!;
     }
 
-    String decryptedPath = await EncryptionUtil.decryptImageToPath(
+    String decryptedPath = await ClientEncryptionUtil.decryptImageToPath(
         downloadedPath, this.from, await multSource.getMultPW(), GetPath.getInstance().path + Platform.pathSeparator + (from));
     await File(downloadedPath).delete();
     ELog.i("Received file to $decryptedPath");

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:encrypt/encrypt.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../utils/crypto_utils.dart';
 import '../../utils/encryption_util.dart';
@@ -46,7 +47,8 @@ class ServerObject {
   Future<void> sendMessage(String message) async {
     List<String> encryptedBlock = await EncryptionUtil.toEncryptedPieces(message, encrypter);
     Map m = {MagicNumber.MESSAGE_COMPILATION: encryptedBlock};
-    client.getChannel()!.sink.add(jsonEncode(m));
+    String messageJSON = jsonEncode(m);
+    client.getChannel()!.sink.add(messageJSON);
   }
 
   Future<void> updateOnlineStatus(List<String> targetUUID) async {

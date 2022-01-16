@@ -1,19 +1,21 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/notification_registry.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/client/data/message_storage.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
-import 'package:mildly_encrypted_package/src/client/objs/encryption_pack.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
+import 'package:mildly_encrypted_package/src/utils/ClientEncryptionUtil.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
 import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
 import 'package:mildly_encrypted_package/src/utils/encryption_util.dart';
 import 'package:mildly_encrypted_package/src/utils/json_validator.dart';
+
+import '../../../../client.dart';
 
 class ChatMessageEvent implements MessageHandler {
   ClientUser from;
@@ -46,11 +48,11 @@ class ChatMessageEvent implements MessageHandler {
       String downloadedPath =
           await FileDownload.downloadFile(url, GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from), downloadProgress: (val) {
         // multSource.fileDownloadProgress[url] = val;
-            multSource.updateFileDownloadProgress(url, val);
+        multSource.updateFileDownloadProgress(url, val);
       });
       // multSource.fileDownloadProgress.remove(url);
       print(downloadedPath);
-      String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, this.from, await multSource.getMultPW(),
+      String decryptedPath = await ClientEncryptionUtil.decryptImageToPath(downloadedPath, this.from, await multSource.getMultPW(),
           GetPath.getInstance().path + Platform.pathSeparator + (keyID ?? from) + Platform.pathSeparator);
       print(decryptedPath);
       await File(downloadedPath).delete();

@@ -36,4 +36,6 @@ class ClientComponent {
   static final String ADD_TO_GROUP = 'atg';
   static final String GROUP_NAME_UPDATE = 'gnu';
   static final String GROUP_IMAGE_UPDATE = 'gpu';
+
+  static final String EXPIRATION_UPDATE_MS = "eums";
 }

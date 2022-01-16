@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/key_exchange_handler.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/subs/online_status_handler.dart';
@@ -10,6 +9,8 @@ import 'package:mildly_encrypted_package/src/logging/ELog.dart';
 import 'package:mildly_encrypted_package/src/utils/encryption_util.dart';
 import 'package:mildly_encrypted_package/src/utils/json_validator.dart';
 import 'package:mildly_encrypted_package/src/utils/magic_nums.dart';
+
+import '../../client.dart';
 
 class ServerMessageHandler {
   ServerObject serverObject;

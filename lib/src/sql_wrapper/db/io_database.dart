@@ -48,7 +48,7 @@ class IODatabase implements SDatabase {
       String? orderBy,
       int? limit,
       int? offset}) async {
-    return await wrapped.query('`$table`', distinct: distinct, columns: columns, whereArgs: whereArgs, where: where);
+    return await wrapped.query('`$table`', distinct: distinct, columns: columns, whereArgs: whereArgs, orderBy: orderBy, limit: limit, where: where);
   }
 
   @override

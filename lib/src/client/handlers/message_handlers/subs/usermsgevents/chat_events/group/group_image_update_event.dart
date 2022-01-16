@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/client_components.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/CoreEventType.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/core_event_registry.dart';
 import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientGroupChat.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
 import 'package:mildly_encrypted_package/src/logging/ELog.dart';
+import 'package:mildly_encrypted_package/src/utils/ClientEncryptionUtil.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
 import 'package:mildly_encrypted_package/src/utils/aes/file_download.dart';
 import 'package:mildly_encrypted_package/src/utils/encryption_util.dart';
@@ -34,7 +36,8 @@ class GroupImageUpdateEvent implements MessageHandler {
       return;
     }
     String downloadedPath = await FileDownload.downloadFile(newImageURL, GetPath.getInstance().path + Platform.pathSeparator + (keyID));
-    String decryptedPath = await EncryptionUtil.decryptImageToPath(downloadedPath, group, await group.getMultPW(), GetPath.getInstance().path + Platform.pathSeparator + (keyID));
+    String decryptedPath = await ClientEncryptionUtil.decryptImageToPath(
+        downloadedPath, group, await group.getMultPW(), GetPath.getInstance().path + Platform.pathSeparator + (keyID));
     await File(downloadedPath).delete();
     ELog.i("Received file to $decryptedPath");
     await group.updateProfilePicturePath(decryptedPath);

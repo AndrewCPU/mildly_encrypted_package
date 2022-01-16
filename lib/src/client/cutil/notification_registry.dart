@@ -1,5 +1,8 @@
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/CoreEventType.dart';
+import 'package:mildly_encrypted_package/src/client/cutil/core/core_event_registry.dart';
 import 'package:mildly_encrypted_package/src/client/cutil/ui_notify.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientGroupChat.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 
 class UpdateNotificationRegistry {
   static final UpdateNotificationRegistry _instance = UpdateNotificationRegistry._internal();
@@ -60,6 +63,7 @@ class UpdateNotificationRegistry {
         listener.newUserMessage(chat, messageID);
       }
     }
+    CoreEventRegistry().notify(CoreEventType.CHAT_REORDER, data: 'data');
   }
 
   void newPicture(ClientUser user, String path) {

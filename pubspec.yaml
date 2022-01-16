@@ -28,6 +28,7 @@ dependencies:
   quick_load_thumbnail:
     git:
       url: git://github.com/AndrewCPU/quick_load_thumbnail.git
+#  archive: ^3.1.8
 dev_dependencies:
   lints: ^1.0.0
   test: ^1.16.0

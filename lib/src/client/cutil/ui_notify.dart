@@ -1,4 +1,5 @@
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientGroupChat.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 
 abstract class ClientNotifier {
   List<String> getListeningFor();

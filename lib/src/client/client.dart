@@ -1,14 +1,12 @@
 library mildly_encrypted_package;
 
 import 'dart:async';
-import 'dart:ffi';
 import 'dart:io';
 
-import 'package:mildly_encrypted_package/mildly_encrypted_package.dart';
 import 'package:mildly_encrypted_package/src/client/data/client_key_manager.dart';
 import 'package:mildly_encrypted_package/src/client/data/message_storage.dart';
-import 'package:mildly_encrypted_package/src/client/handlers/message_handlers/message_handler.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ClientManagement.dart';
+import 'package:mildly_encrypted_package/src/client/objs/ClientUser.dart';
 import 'package:mildly_encrypted_package/src/client/objs/EncryptedKeyExchanger.dart';
 import 'package:mildly_encrypted_package/src/client/objs/ServerObject.dart';
 import 'package:mildly_encrypted_package/src/utils/GetPath.dart';
@@ -16,7 +14,6 @@ import 'package:mildly_encrypted_package/src/utils/crypto_utils.dart';
 import 'package:mildly_encrypted_package/src/utils/save_file.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:pointycastle/asymmetric/api.dart' as rsa;
-import 'package:pointycastle/api.dart' as asym;
 import '../logging/ELog.dart';
 import 'handlers/web_socket_message_handler.dart';
 
@@ -58,7 +55,8 @@ class EncryptedClient {
       required this.receiveSpecialData}) {
     GetPath.initialize(rootDirectory);
     if (_instance != null) {
-      _instance!.getChannel()?.sink.close(1234);
+      offlineQueue = List.from(_instance!.offlineQueue);
+      _instance!.getChannel()?.sink.close(9872);
       backgroundTimer?.cancel();
     }
     _instance = this;
@@ -111,6 +109,10 @@ class EncryptedClient {
 
   String qrPublic = '';
   String qrPrivate = '';
+
+  void deauthenticate() {
+    _authenticated = false;
+  }
 
   Future<void> connect() async {
     _authenticated = false;

@@ -1,3 +1,0 @@
-enum ColumnType{
-  int, text
-}
